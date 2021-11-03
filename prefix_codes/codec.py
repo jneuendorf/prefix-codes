@@ -1,5 +1,5 @@
-from decoder import Decoder
-from encoder import Encoder
+from prefix_codes.decoder import Decoder
+from prefix_codes.encoder import Encoder
 
 
 class Codec:

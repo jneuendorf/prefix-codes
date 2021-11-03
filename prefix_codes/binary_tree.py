@@ -1,7 +1,7 @@
 from typing import Optional
 
 from prefix_codes.typedefs import Bit, BitStream
-from utils import read_bits_from_string
+from prefix_codes.utils import read_bits_from_string
 
 
 class BinaryTree(list[Optional['BinaryTree']]):

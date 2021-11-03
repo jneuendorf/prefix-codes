@@ -1,5 +1,5 @@
 from prefix_codes.codec import Codec
-from utils import read_bits
+from prefix_codes.utils import read_bits
 
 if __name__ == '__main__':
     codeword_table = {
