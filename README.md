@@ -3,6 +3,8 @@
 
 Python prefix codes codec with explicit codeword table using a binary tree.
 
+148 lines of code (`cat **/*.py | grep -v '^$' | wc -l`).
+
 
 ## How to use
 
