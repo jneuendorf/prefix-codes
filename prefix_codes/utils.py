@@ -1,3 +1,4 @@
+import itertools
 from collections import Iterable
 from typing import TypeVar
 
@@ -12,7 +13,6 @@ def get_bit(byte: int, i: int) -> Bit:
 
 def set_bit(byte: int, i: int, bit: Bit) -> int:
     """See https://stackoverflow.com/a/12174051/6928824"""
-
     mask = (1 << i)
     return (byte & ~mask) | (bit << i)
 
@@ -36,14 +36,23 @@ def read_bits_from_string(s: str) -> BitStream:
 
 
 def chunk(collection: Iterable[T], n: int) -> Iterable[Iterable[T]]:
-    return zip(*(
-        [iter(collection)]*n
-    ))
+    return itertools.zip_longest(*[iter(collection)]*n, fillvalue=0)
 
 
 def write_bits(bit_stream: BitStream) -> bytes:
     """Inverse of `read_bits`."""
-
     return bytes(
         get_byte(bits) for bits in chunk(bit_stream, n=8)
     )
+
+# def shannon_code(codeword_table: dict[str, str], message: str) -> CodewordLenghts:
+#     n = len(message)
+#     counter = Counter(message)
+#     relative_frequencies = {
+#         terminal: count / n
+#         for terminal, count in counter.items()
+#     }
+#     return {
+#         terminal: ceil(-log2(relative_frequencies[terminal]))
+#         for terminal in counter
+#     }

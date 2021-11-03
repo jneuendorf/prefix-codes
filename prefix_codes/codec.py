@@ -1,6 +1,3 @@
-from collections import Iterable
-from typing import Literal
-
 from decoder import Decoder
 from encoder import Encoder
 
@@ -18,5 +15,9 @@ class Codec:
     def encode(self, message: str) -> bytes:
         return self.encoder.encode(message)
 
-    def decode(self, byte_stream: bytes) -> str:
-        return ''.join(self.decoder.decode(byte_stream))
+    def decode(self, byte_stream: bytes, max_length: int = None) -> str:
+        return ''.join(self.decoder.decode(byte_stream, max_length))
+
+    @property
+    def tree(self):
+        return self.decoder.tree

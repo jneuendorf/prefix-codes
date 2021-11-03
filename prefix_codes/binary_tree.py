@@ -1,22 +1,7 @@
 from typing import Optional
 
 from prefix_codes.typedefs import Bit, BitStream
-# def shannon_code(codeword_table: dict[str, str], message: str) -> CodewordLenghts:
-#     n = len(message)
-#     counter = Counter(message)
-#     relative_frequencies = {
-#         terminal: count / n
-#         for terminal, count in counter.items()
-#     }
-#     return {
-#         terminal: ceil(-log2(relative_frequencies[terminal]))
-#         for terminal in counter
-#     }
 from utils import read_bits_from_string
-
-
-# CodewordLenghts = dict[str, int]
-# Code = Literal['shannon']
 
 
 class BinaryTree(list[Optional['BinaryTree']]):
@@ -31,15 +16,7 @@ class BinaryTree(list[Optional['BinaryTree']]):
     def from_codeword_table(
         cls,
         codeword_table: dict[str, str],
-        # message: str = '',
-        # code: Code = 'shannon',
     ) -> 'BinaryTree':
-        # assert not (
-        #         set(message) - codeword_table.keys()), 'message contains characters not defined in the codeword table'
-        # if code == 'shannon':
-        #     codeword_lengths = shannon_code(codeword_table, message)
-        # else:
-        #     raise NotImplementedError(f'Code {code} not implemented')
         root = cls(root=None)
         for terminal, codeword in codeword_table.items():
             root.add_terminal(read_bits_from_string(codeword), terminal)
@@ -76,11 +53,11 @@ class BinaryTree(list[Optional['BinaryTree']]):
             self[bit] = type(self)(root=self.root)
         self[bit].add_terminal(bits, terminal, replace=replace)
 
-    def consume_bit(self, bit: Bit) -> tuple[str, 'BinaryTree']:
+    def consume_bit(self, bit: Bit) -> tuple[Optional[str], 'BinaryTree']:
         """Goes to the next node according to `bit` and returns it and the according character."""
-
-        if self.terminal:
-            return self.terminal, self.root
+        assert self[bit] is not None, f'could not consume bit {bit}'
+        next_node = self[bit]
+        if next_node.terminal:
+            return next_node.terminal, self.root
         else:
-            assert self[bit] is not None, f'could not consume bit {bit}'
-            return '', self[bit]
+            return None, next_node

@@ -9,6 +9,8 @@ class Encoder:
         self.codeword_table = codeword_table
 
     def encode(self, message: str) -> bytes:
+        message_only_chars = set(message) - self.codeword_table.keys()
+        assert not message_only_chars, f'message contains invalid characters: {message_only_chars}'
         bit_stream: BitStream = [
             bit
             for char in message
