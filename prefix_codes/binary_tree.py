@@ -1,17 +1,6 @@
-from collections import Counter, Iterable, Generator
-from math import ceil, log2
-from typing import Literal, Sequence, Optional
+from typing import Optional
 
-Bit = Literal[0, 1]
-CodewordLenghts = dict[str, int]
-# Code = Literal['shannon']
-
-
-def str2bits(s: str) -> Sequence[Bit]:
-    assert all(char in ('0', '1') for char in set(s)), f'Expected bit string but got "{s}"'
-    return [int(char) for char in s]  # noqa
-
-
+from prefix_codes.typedefs import Bit, BitStream
 # def shannon_code(codeword_table: dict[str, str], message: str) -> CodewordLenghts:
 #     n = len(message)
 #     counter = Counter(message)
@@ -23,6 +12,11 @@ def str2bits(s: str) -> Sequence[Bit]:
 #         terminal: ceil(-log2(relative_frequencies[terminal]))
 #         for terminal in counter
 #     }
+from utils import read_bits_from_string
+
+
+# CodewordLenghts = dict[str, int]
+# Code = Literal['shannon']
 
 
 class BinaryTree(list[Optional['BinaryTree']]):
@@ -48,7 +42,7 @@ class BinaryTree(list[Optional['BinaryTree']]):
         #     raise NotImplementedError(f'Code {code} not implemented')
         root = cls(root=None)
         for terminal, codeword in codeword_table.items():
-            root.add_terminal(str2bits(codeword), terminal)
+            root.add_terminal(read_bits_from_string(codeword), terminal)
         return root
 
     def __delitem__(self, key: Bit):
@@ -69,7 +63,7 @@ class BinaryTree(list[Optional['BinaryTree']]):
     def is_root(self):
         return self.root is self
 
-    def add_terminal(self, bit_sequence: Iterable[Bit], terminal: str, replace=False) -> None:
+    def add_terminal(self, bit_sequence: BitStream, terminal: str, replace=False) -> None:
         if not bit_sequence:
             if self.terminal is not None and not replace:
                 raise ValueError(f'Cannot set terminal {terminal} because ode already has terminal {self.terminal}')
@@ -82,9 +76,9 @@ class BinaryTree(list[Optional['BinaryTree']]):
             self[bit] = type(self)(root=self.root)
         self[bit].add_terminal(bits, terminal, replace=replace)
 
-    # def parse(self, bits: Iterable[Bit]) -> Generator[str]:
-    #     node = self.root
     def consume_bit(self, bit: Bit) -> tuple[str, 'BinaryTree']:
+        """Goes to the next node according to `bit` and returns it and the according character."""
+
         if self.terminal:
             return self.terminal, self.root
         else:
