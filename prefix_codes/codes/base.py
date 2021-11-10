@@ -1,6 +1,6 @@
 import itertools
 from abc import ABC, abstractmethod
-from collections import Iterable, Hashable
+from collections import Iterable, Hashable, Counter
 from typing import TypeVar, Generic, Any
 
 from prefix_codes.binary_tree import BinaryTree
@@ -21,9 +21,9 @@ class Code(ABC, Generic[T]):
             assert max_length >= 0, '"max_length" must be positive'
             return itertools.islice(source, max_length)
 
-    @property
-    def symbol_set(self) -> set[T]:
-        return set(self.source)
+    # @property
+    # def symbol_set(self) -> set[T]:
+    #     return set(self.source)
 
     @abstractmethod
     def get_tree(self) -> BinaryTree[T, Any]:
@@ -42,3 +42,20 @@ class Code(ABC, Generic[T]):
         table: dict[T, str] = {}
         traverse(self.get_tree(), '')
         return table
+
+    def get_relative_frequencies(self) -> dict[T, int]:
+        counter = Counter(self.source)
+        n = sum(counter.values())
+        return {
+            symbol: count / n
+            for symbol, count in counter.items()
+        }
+
+    @property
+    def average_codeword_length(self) -> float:
+        table = self.get_table()
+        relative_frequencies = self.get_relative_frequencies()
+        return sum(
+            relative_frequencies[symbol] * len(codeword)
+            for symbol, codeword in table.items()
+        )

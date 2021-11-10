@@ -1,4 +1,4 @@
-from collections import Hashable
+from collections import Hashable, Iterable
 from typing import TypeVar, Generic
 
 from prefix_codes.codes.base import Code
@@ -12,20 +12,26 @@ class Codec(Generic[T]):
     code: Code[T]
     encoder: Encoder[T]
     decoder: Decoder[T]
-    # codeword_table: dict[str, str]
 
     def __init__(self, code: Code[T]):
         self.code = code
         self.encoder = Encoder(code.get_table())
         self.decoder = Decoder(code)
-        # self.codeword_table = codeword_table
 
-    def encode(self, message: str) -> bytes:
+    def encode(self, message: Iterable[T]) -> bytes:
         return self.encoder.encode(message)
 
-    def decode(self, byte_stream: bytes, max_length: int = None) -> str:
-        return ''.join(self.decoder.decode(byte_stream, max_length))
+    def decode(self, byte_stream: bytes, max_length: int = None) -> Iterable[T]:
+        return self.decoder.decode(byte_stream, max_length)
+
+    @property
+    def table(self):
+        return self.code.get_table()
 
     @property
     def tree(self):
-        return self.decoder.code.get_tree()
+        return self.code.get_tree()
+
+    @property
+    def average_codeword_length(self) -> float:
+        return self.code.average_codeword_length

@@ -1,40 +1,63 @@
+import pickle
+import sys
+from argparse import ArgumentParser
+from pathlib import Path
+
+from prefix_codes.codes.huffman import HuffmanCode
+from prefix_codes.codes.base import Code
 from prefix_codes.codec import Codec
 from prefix_codes.utils import read_bits
 
+
+NUM_BINARY_TREE_BYTES = 20
+
+
 if __name__ == '__main__':
-    codeword_table = {
-        'a': '00',
-        'b': '01',
-        'c': '100',
-        'd': '101',
-        'e': '110',
-        'f': '111',
-    }
-    words = [
-        'a',  # => 00 == 0
-        'ab',  # => 10 00 == 8
-        'ffa',  # => 00 111 111 == 63
-        'deadbeef',  # => 111 110 110 01 101 00 110 101 = 111110 11001101 00110101 == 62 205 53
-        'bad cafe bad face bed fed'.replace(' ', ''),
-    ]
-    codec = Codec(codeword_table)
-    print(codec.tree)
+    parser = ArgumentParser(description='Decode or encode files')
+    parser.add_argument(
+        'code',
+        choices=['huffman'],
+        type=str,
+        help='code to use',
+    )
+    parser.add_argument(
+        'action',
+        choices=['encode', 'decode'],
+        type=str,
+        help='encode or decode',
+    )
+    parser.add_argument(
+        'filename',
+        type=Path,
+        help='path to the file to be processed',
+    )
 
-    for word in words:
-        print('word:', word)
-        encoded = codec.encode(word)
-        print('encoded', ''.join(
-            str(bit) for bit in reversed(list(read_bits(encoded)))
-        ))
-        processed_word = codec.decode(encoded, max_length=len(word))
-        assert processed_word == word, (
-            f'incorrect decoding: expected {word} but got {processed_word}'
+    args = parser.parse_args()
+    print(args)
+
+    with open(args.filename, 'rb') as file:
+        message = file.read()
+
+    if args.action == 'encode':
+        code: Code
+        if args.code == 'huffman':
+            code = HuffmanCode(message)
+        else:
+            raise ValueError('invalid code')
+
+        codec = Codec(code)
+        tree_bytes = pickle.dumps(codec.tree)
+        n = len(tree_bytes)
+        tree_size_bytes = n.to_bytes(length=NUM_BINARY_TREE_BYTES, byteorder='big')
+        print('size of tree:', n)
+        print(tree_size_bytes)
+
+        sys.stdout.buffer.write(
+            tree_size_bytes
+            + tree_bytes
+            + codec.encode(message)
         )
+    else:
+        ...
 
-    invalid_message = 'invalid characters!'
-    print('trying invalid message:', invalid_message)
-    try:
-        codec.encode('invalid characters!')
-    except AssertionError as e:
-        print(e)
 

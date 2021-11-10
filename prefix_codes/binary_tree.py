@@ -62,7 +62,7 @@ class BinaryTree(list[Optional['BinaryTree']], Generic[T, M]):
         self[0].set_root(root)
         self[1].set_root(root)
 
-    def add_terminal(self, bit_sequence: BitStream, terminal: str, replace=False) -> None:
+    def add_terminal(self, bit_sequence: BitStream, terminal: T, replace=False) -> None:
         if not bit_sequence:
             if self.terminal is not None and not replace:
                 raise ValueError(f'Cannot set terminal {terminal} because ode already has terminal {self.terminal}')
@@ -75,7 +75,7 @@ class BinaryTree(list[Optional['BinaryTree']], Generic[T, M]):
             self[bit] = type(self)(root=self.root)
         self[bit].add_terminal(bits, terminal, replace=replace)
 
-    def consume_bit(self, bit: Bit) -> tuple[Optional[str], 'BinaryTree']:
+    def consume_bit(self, bit: Bit) -> tuple[Optional[T], 'BinaryTree']:
         """Goes to the next node according to `bit` and returns it and the according character."""
         assert self[bit] is not None, f'could not consume bit {bit}'
         next_node = self[bit]

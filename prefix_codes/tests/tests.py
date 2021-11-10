@@ -1,4 +1,5 @@
 import unittest
+from pprint import pprint
 
 from prefix_codes.codec import Codec
 from prefix_codes.codes.huffman import HuffmanCode
@@ -78,12 +79,9 @@ class TestStringMethods(unittest.TestCase):
     def test_huffmann_codec_table(self):
         message = b'aabc'
         codec = Codec(HuffmanCode(message))
-        # print('huffman tree', codec.tree)
-        codeword_table = codec.code.get_table()
-        # print('huffman table', codeword_table)
         table: dict[str, str] = {
             chr(byte_value): codeword
-            for byte_value, codeword in codeword_table.items()
+            for byte_value, codeword in codec.table.items()
         }
         self.assertEqual(table.keys(), {'a', 'b', 'c'})
         self.assertEqual(len(table['a']), 1)
@@ -91,4 +89,25 @@ class TestStringMethods(unittest.TestCase):
         self.assertEqual(len(table['c']), 2)
 
     def test_huffman_with_file_english_text(self):
-        
+        with open('prefix_codes/tests/englishText.txt', 'rb') as file:
+            message = file.read()
+        codec = Codec(HuffmanCode(message))
+        print('------------------------------------------------------')
+        print('Codeword table for prefix_codes/tests/englishText.txt:')
+        pprint(codec.table)
+        print('-------------------------')
+        print('Average code word length:')
+        print(codec.average_codeword_length)
+        self.assertAlmostEqual(codec.average_codeword_length, 4.596, places=3)
+
+    def test_huffman_with_file_image_data(self):
+        with open('prefix_codes/tests/imageData.raw', 'rb') as file:
+            message = file.read()
+        codec = Codec(HuffmanCode(message))
+        print('------------------------------------------------------')
+        print('Codeword table for prefix_codes/tests/englishText.txt:')
+        pprint(codec.table)
+        print('-------------------------')
+        print('Average code word length:')
+        print(codec.average_codeword_length)
+        self.assertAlmostEqual(codec.average_codeword_length, 7.634, places=3)

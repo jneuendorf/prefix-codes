@@ -20,10 +20,4 @@ class HuffmanCode(Code[T]):
         # print('huffman tree', table)
         return table
 
-    def get_relative_frequencies(self) -> dict[T, int]:
-        counter = Counter(self.source)
-        n = sum(counter.values())
-        return {
-            symbol: count / n
-            for symbol, count in counter.items()
-        }
+
