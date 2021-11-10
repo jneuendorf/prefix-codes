@@ -1,16 +1,24 @@
+from collections import Hashable
+from typing import TypeVar, Generic
+
+from prefix_codes.codes.base import Code
 from prefix_codes.decoder import Decoder
 from prefix_codes.encoder import Encoder
 
+T = TypeVar('T', bound=Hashable)
 
-class Codec:
-    encoder: Encoder
-    decoder: Decoder
-    codeword_table: dict[str, str]
 
-    def __init__(self, codeword_table: dict[str, str]):
-        self.encoder = Encoder(codeword_table)
-        self.decoder = Decoder(codeword_table)
-        self.codeword_table = codeword_table
+class Codec(Generic[T]):
+    code: Code[T]
+    encoder: Encoder[T]
+    decoder: Decoder[T]
+    # codeword_table: dict[str, str]
+
+    def __init__(self, code: Code[T]):
+        self.code = code
+        self.encoder = Encoder(code.get_table())
+        self.decoder = Decoder(code)
+        # self.codeword_table = codeword_table
 
     def encode(self, message: str) -> bytes:
         return self.encoder.encode(message)
@@ -20,4 +28,4 @@ class Codec:
 
     @property
     def tree(self):
-        return self.decoder.tree
+        return self.decoder.code.get_tree()

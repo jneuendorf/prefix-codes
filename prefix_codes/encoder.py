@@ -1,11 +1,16 @@
+from collections import Hashable
+from typing import TypeVar, Generic
+
 from prefix_codes.typedefs import BitStream
 from prefix_codes.utils import write_bits, read_bits_from_string
 
+T = TypeVar('T', bound=Hashable)
 
-class Encoder:
-    codeword_table: dict[str, str]
 
-    def __init__(self, codeword_table: dict[str, str]):
+class Encoder(Generic[T]):
+    codeword_table: dict[T, str]
+
+    def __init__(self, codeword_table: dict[T, str]):
         self.codeword_table = codeword_table
 
     def encode(self, message: str) -> bytes:
