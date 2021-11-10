@@ -4,4 +4,4 @@ main:
 
 .PHONY: test
 test:
-	python3.9 -m unittest prefix_codes.tests
+	python3.9 -m unittest prefix_codes.tests.tests
