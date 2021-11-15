@@ -59,8 +59,10 @@ class BinaryTree(list[Optional['BinaryTree']], Generic[T, M]):
 
     def set_root(self, root: 'BinaryTree') -> None:
         self.root = root
-        self[0].set_root(root)
-        self[1].set_root(root)
+        if self[0]:
+            self[0].set_root(root)
+        if self[1]:
+            self[1].set_root(root)
 
     def add_terminal(self, bit_sequence: BitStream, terminal: T, replace=False) -> None:
         if not bit_sequence:

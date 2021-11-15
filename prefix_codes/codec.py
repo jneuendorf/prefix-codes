@@ -16,7 +16,7 @@ class Codec(Generic[T]):
     def __init__(self, code: Code[T]):
         self.code = code
         self.encoder = Encoder(code.get_table())
-        self.decoder = Decoder(code)
+        self.decoder = Decoder(code.get_tree())
 
     def encode(self, message: Iterable[T]) -> bytes:
         return self.encoder.encode(message)

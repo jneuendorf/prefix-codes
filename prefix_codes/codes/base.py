@@ -13,6 +13,21 @@ class Code(ABC, Generic[T]):
     def __init__(self, source: Iterable[T]):
         self.source = self.read_source(source)
 
+    @classmethod
+    def table_from_tree(cls, tree: BinaryTree[T, Any]):
+        def traverse(node, path: str):
+            if node.terminal is not None:
+                table[node.terminal] = path
+            else:
+                if node[0]:
+                    traverse(node[0], f'{path}0')
+                if node[1]:
+                    traverse(node[1], f'{path}1')
+
+        table: dict[T, str] = {}
+        traverse(tree, '')
+        return table
+
     @staticmethod
     def read_source(source: Iterable[T], max_length: int = None) -> Iterable[T]:
         if max_length is None:

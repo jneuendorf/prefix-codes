@@ -1,16 +1,17 @@
 import pickle
-import sys
 from argparse import ArgumentParser
+from math import ceil
 from pathlib import Path
+from typing import Any
 
-from prefix_codes.codes.huffman import HuffmanCode
-from prefix_codes.codes.base import Code
+from prefix_codes.binary_tree import BinaryTree
 from prefix_codes.codec import Codec
-from prefix_codes.utils import read_bits
-
+from prefix_codes.codes.base import Code
+from prefix_codes.codes.huffman import HuffmanCode
+from prefix_codes.decoder import Decoder
 
 NUM_BINARY_TREE_BYTES = 20
-
+NUM_MESSAGE_BYTES = NUM_BINARY_TREE_BYTES * 2  # -> message_size <= tree_size**2
 
 if __name__ == '__main__':
     parser = ArgumentParser(description='Decode or encode files')
@@ -33,13 +34,14 @@ if __name__ == '__main__':
     )
 
     args = parser.parse_args()
-    print(args)
 
-    with open(args.filename, 'rb') as file:
-        message = file.read()
+    filename: Path = args.filename
 
     if args.action == 'encode':
-        code: Code
+        with open(filename, 'rb') as file:
+            message = file.read()
+
+        code: Code[int]  # bytes is an Iterable[int]
         if args.code == 'huffman':
             code = HuffmanCode(message)
         else:
@@ -47,23 +49,58 @@ if __name__ == '__main__':
 
         codec = Codec(code)
         tree_bytes = pickle.dumps(codec.tree)
-        n = len(tree_bytes)
-        tree_size_bytes = n.to_bytes(length=NUM_BINARY_TREE_BYTES, byteorder='big')
-        print('size of tree:', n)
-        print(tree_size_bytes)
-
-        # python3.9 main.py huffman encode prefix_codes/tests/englishText.txt
-        # Namespace(code='huffman', action='encode', filename=PosixPath('prefix_codes/tests/englishText.txt'))
-        # size of tree: 6143
-        # b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x17\xff'
-        # ROOT[ROOT[ROOT[101, ROOT[ROOT[ROOT[ROOT[ROOT[84, ROOT[ROOT[68, 63], ROOT[79, 113]]], ROOT[45, 73]], ROOT[ROOT[ROOT[83, ROOT[33, ROOT[53, ROOT[ROOT[93, 42], ROOT[88, ROOT[ROOT[ROOT[ROOT[ROOT[ROOT[ROOT[126, 60], ROOT[62, 94]], 37], ROOT[9, ROOT[38, 64]]], 43], 90], ROOT[81, ROOT[36, 47]]]]]]]], ROOT[120, 80]], ROOT[ROOT[ROOT[70, ROOT[89, 52]], ROOT[106, ROOT[51, 56]]], ROOT[39, ROOT[95, 49]]]]], ROOT[44, 121]], 115]], ROOT[ROOT[105, 110], ROOT[ROOT[ROOT[112, 103], ROOT[119, ROOT[ROOT[ROOT[ROOT[82, 69], ROOT[ROOT[76, ROOT[74, ROOT[35, ROOT[124, 91]]]], 66]], ROOT[65, ROOT[ROOT[50, 48], 67]]], 118]]], 111]]], ROOT[ROOT[ROOT[97, ROOT[108, 100]], ROOT[116, ROOT[ROOT[ROOT[ROOT[ROOT[ROOT[77, 87], ROOT[ROOT[71, ROOT[85, 75]], 78]], 34], 46], 102], ROOT[109, 10]]]], ROOT[32, ROOT[ROOT[ROOT[13, ROOT[ROOT[ROOT[ROOT[ROOT[ROOT[40, 41], 59], ROOT[122, ROOT[61, 58]]], ROOT[72, ROOT[ROOT[86, 55], ROOT[54, 57]]]], 107], 98]], ROOT[117, 99]], ROOT[104, 114]]]]]
-
-        sys.stdout.buffer.write(
-            tree_size_bytes
-            + tree_bytes
-            + codec.encode(message)
+        tree_size = len(tree_bytes)
+        assert ceil(tree_size.bit_length() / 8) <= NUM_BINARY_TREE_BYTES, (
+            f'binary tree size is too large to be represented with {NUM_BINARY_TREE_BYTES} bytes'
         )
+        tree_size_bytes = tree_size.to_bytes(length=NUM_BINARY_TREE_BYTES, byteorder='big')
+
+        out_filename: Path = filename.with_suffix(f'{filename.suffix}.enc')
+        assert not out_filename.exists(), f'{out_filename} already exists'
+
+        encoded_message_bytes = codec.encode(message)
+        message_size = sum(1 for _ in code.source)
+        message_size_bytes = message_size.to_bytes(length=NUM_MESSAGE_BYTES, byteorder='big')
+        assert ceil(message_size.bit_length() / 8) <= NUM_MESSAGE_BYTES, (
+            f'message size is too large to be represented with {NUM_MESSAGE_BYTES} bytes'
+        )
+        print('binary tree size', tree_size)
+        print('compression ratio',  message_size / len(encoded_message_bytes))
+        with open(out_filename, 'wb') as outfile:
+            outfile.write(
+                tree_size_bytes + tree_bytes
+                + message_size_bytes + encoded_message_bytes
+            )
     else:
-        ...
+        assert filename.suffix == '.enc', 'the encoded file extension must be ".enc"'
+        out_filename: Path = (
+            filename
+            .with_suffix('')  # remove '.enc'
+            .with_stem(f'{filename.with_suffix("").stem}_dec')  # add '_dec' to stem
+        )
+        assert not out_filename.exists(), f'{out_filename} already exists'
 
+        with open(args.filename, 'rb') as file:
+            cursor = 0
+            tree_size_bytes = file.read(NUM_BINARY_TREE_BYTES)
+            tree_size = int.from_bytes(tree_size_bytes, byteorder='big')
+            cursor += NUM_BINARY_TREE_BYTES
 
+            file.seek(cursor)
+            tree_bytes = file.read(tree_size)
+            cursor += tree_size
+
+            file.seek(cursor)
+            message_size_bytes = file.read(NUM_MESSAGE_BYTES)
+            message_size = int.from_bytes(message_size_bytes, byteorder='big')
+            cursor += NUM_MESSAGE_BYTES
+
+            file.seek(cursor)
+            byte_stream = file.read()
+
+        tree: BinaryTree[int, Any] = pickle.loads(tree_bytes)
+        decoder: Decoder[int] = Decoder(tree)
+        decoded_message = bytes(decoder.decode(byte_stream, max_length=message_size))
+
+        with open(out_filename, 'wb') as outfile:
+            outfile.write(decoded_message)

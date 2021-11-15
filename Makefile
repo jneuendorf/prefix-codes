@@ -1,10 +1,14 @@
-.PHONY: encode
-encode:
-	python3.9 main.py huffman encode prefix_codes/tests/englishText.txt > prefix_codes/tests/englishText.txt.enc
-
-.PHONY: test_encode
-test_encode:
+.PHONY: encode_english
+encode_english:
 	python3.9 main.py huffman encode prefix_codes/tests/englishText.txt
+
+.PHONY: decode_english
+decode_english:
+	python3.9 main.py huffman decode prefix_codes/tests/englishText.txt.enc
+
+.PHONY: english
+english: encode_english decode_english
+	diff prefix_codes/tests/englishText.txt prefix_codes/tests/englishText_dec.txt
 
 .PHONY: help
 help:

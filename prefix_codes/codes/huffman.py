@@ -1,8 +1,6 @@
-from collections import Counter
-
+from prefix_codes.binary_tree import BinaryTree as Node
 from prefix_codes.codes.base import Code
 from prefix_codes.codes.base import T
-from prefix_codes.binary_tree import BinaryTree as Node
 
 
 class HuffmanCode(Code[T]):
@@ -16,8 +14,9 @@ class HuffmanCode(Code[T]):
             a, b = sorted(orphans, key=lambda item: item.meta)[:2]
             orphans -= {a, b}
             orphans |= {Node(children=[a, b], meta=a.meta + b.meta)}
-        table = orphans.pop()
-        # print('huffman tree', table)
-        return table
+        tree = orphans.pop()
+        tree.set_root(tree)
+        # print('huffman tree', tree)
+        return tree
 
 
