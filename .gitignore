@@ -1,2 +1,4 @@
+*.enc
+*_dec.*
 .DS_Store
 __pycache__
