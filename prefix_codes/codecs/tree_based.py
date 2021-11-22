@@ -32,6 +32,9 @@ class TreeBasedCodec(BaseCodec, Generic[T]):
     def deserialize(cls, serialization: bytes) -> 'TreeBasedCodec[T]':
         return cls.from_tree(pickle.loads(serialization))
 
+    def serialize(self) -> bytes:
+        return pickle.dumps(self.tree)
+
     def encode(self, message: Iterable[T]) -> bytes:
         message_only_chars = set(message) - self.table.keys()
         assert not message_only_chars, f'message contains invalid characters: {message_only_chars}'
@@ -53,9 +56,6 @@ class TreeBasedCodec(BaseCodec, Generic[T]):
             if terminal is not None:
                 yield terminal
                 num_chars += 1
-
-    def serialize(self) -> bytes:
-        return pickle.dumps(self.tree)
 
     def get_average_codeword_length(self, message: Iterable[T]) -> float:
         table = self.table

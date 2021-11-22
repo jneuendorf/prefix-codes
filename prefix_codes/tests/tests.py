@@ -1,5 +1,7 @@
 import unittest
+from collections import OrderedDict
 
+from prefix_codes.codecs.shannon_fano_elias import ShannonFanoEliasCodec
 from prefix_codes.codecs.tree_based import TreeBasedCodec
 from prefix_codes.codes.huffman import create_huffman_tree
 
@@ -126,3 +128,22 @@ class TestStringMethods(unittest.TestCase):
         # print('Average code word length:')
         # print(codec.average_codeword_length)
         self.assertAlmostEqual(codec.get_average_codeword_length(message), 7.634, places=3)
+
+    def test_shannon_fano_elias_encode_decode(self):
+        message = b'banana'
+        probabilities = OrderedDict([
+            (ord('a'), 1 / 2),
+            (ord('n'), 1 / 3),
+            (ord('b'), 1 / 6),
+        ])
+        codec = ShannonFanoEliasCodec(probabilities, model='iid')
+        encoded = codec.encode(message)
+        z, K = codec.get_z_and_K(message)
+        self.assertEqual(
+            encoded,
+            int('111000100', 2).to_bytes(len(encoded), byteorder='big'),
+        )
+        self.assertEqual(
+            bytes(codec.decode(encoded, num_bits=K, max_length=len(message))),
+            message
+        )

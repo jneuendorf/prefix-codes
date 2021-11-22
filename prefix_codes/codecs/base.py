@@ -17,7 +17,7 @@ class BaseCodec(ABC, Generic[T]):
         ...
 
     @abstractmethod
-    def decode(self, byte_stream: bytes, max_length: int = None) -> Iterable[T]:
+    def decode(self, byte_stream: bytes, *, max_length: int = None) -> Iterable[T]:
         ...
 
     @abstractmethod

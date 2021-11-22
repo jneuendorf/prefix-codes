@@ -1,3 +1,4 @@
+import pickle
 from collections.abc import Iterable, Callable
 from itertools import takewhile
 from math import log2, ceil
@@ -18,6 +19,28 @@ class ShannonFanoEliasCodec(BaseCodec, Generic[T]):
         self.probabilities = probabilities
         self.model = model
 
+    @classmethod
+    def deserialize(cls, serialization: bytes) -> 'ShannonFanoEliasCodec[T]':
+        probabilities: OrderedDict[T, float]
+        model: Literal['iid', 'markov', 'func']
+        probabilities, model = pickle.loads(serialization)
+        return cls(probabilities, model)
+
+    def serialize(self) -> bytes:
+        return pickle.dumps([self.probabilities, self.model])
+
+    def get_z_and_K(self, message: Iterable[T]) -> tuple[int, int]:
+        W = 1
+        L = 0
+        for i, symbol in enumerate(message):
+            prev_symbols = message[:i]
+            p = self.p(symbol, prev_symbols)
+            L += W * self.c(symbol, prev_symbols)
+            W *= p
+        K = ceil(-log2(W))
+        z = ceil(L * 2 ** K)
+        return z, K
+
     def encode(self, message: Iterable[T]) -> bytes:
         """See slide 34.
         W: interval width W_i, the current value in W_0, ..., W_N
@@ -29,29 +52,25 @@ class ShannonFanoEliasCodec(BaseCodec, Generic[T]):
         print(self.probabilities)
         assert all(symbol in self.probabilities for symbol in message), 'message contains invalid symbols'
 
-        W = 1
-        L = 0
-        for i, symbol in enumerate(message):
-            prev_symbols = message[:i]
-            p = self.p(symbol, prev_symbols)
-            L += W * self.c(symbol, prev_symbols)
-            W *= p
-        K = ceil(-log2(W))
-        z = ceil(L * 2 ** K)
+        z, K = self.get_z_and_K(message)
         print(bin(z))
         return z.to_bytes(ceil(K / 8), byteorder='big')
 
-    def decode(self, byte_stream: bytes, max_length: int = None) -> Iterable[T]:
+    def decode(self, byte_stream: bytes, *, max_length: int = None, num_bits: int = None) -> Iterable[T]:
         """See slide 36."""
-        M = len(byte_stream)
-        z = int(b''.join(byte_stream))
+        if num_bits is None:
+            M = len(byte_stream) * 8
+        else:
+            M = num_bits
+
+        z = int.from_bytes(byte_stream, byteorder='big')
         v = z * 2**(-M)
         W = 1
         L = 0
 
         symbols = list(self.probabilities)
         for i in range(max_length):
-            k = 1
+            k = 0
             # TODO: what to pass as condition?
             U = L + W * self.p(symbols[k], [])
             while v >= U:
@@ -60,10 +79,6 @@ class ShannonFanoEliasCodec(BaseCodec, Generic[T]):
             W = W * self.p(symbols[k], [])
             L = U - W
             yield symbols[k]
-
-    @property
-    def tree(self) -> Optional[BinaryTree[T, Any]]:
-        return None
 
     @property
     def p(self) -> Callable[[T, Iterable[T]], float]:
