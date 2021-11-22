@@ -27,7 +27,7 @@ class BinaryTree(list[Optional['BinaryTree']], Generic[T, M]):
         self.meta = meta
 
     @classmethod
-    def from_codeword_table(
+    def from_table(
         cls,
         codeword_table: dict[str, str],
     ) -> 'BinaryTree[str, None]':
@@ -85,3 +85,17 @@ class BinaryTree(list[Optional['BinaryTree']], Generic[T, M]):
             return next_node.terminal, self.root
         else:
             return None, next_node
+
+    def get_table(self) -> dict[T, str]:
+        def traverse(node: BinaryTree[T, M], path: str):
+            if node.terminal is not None:
+                table[node.terminal] = path
+            else:
+                if node[0]:
+                    traverse(node[0], f'{path}0')
+                if node[1]:
+                    traverse(node[1], f'{path}1')
+
+        table: dict[T, str] = {}
+        traverse(self, '')
+        return table

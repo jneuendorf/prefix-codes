@@ -1,10 +1,12 @@
 import itertools
-from collections import Iterable
+from collections import Counter
+from collections.abc import Hashable, Iterable
 from typing import TypeVar
 
 from prefix_codes.typedefs import BitStream, Bit
 
 T = TypeVar('T')
+H = TypeVar('H', bound=Hashable)
 
 
 def get_bit(byte: int, i: int) -> Bit:
@@ -44,3 +46,12 @@ def write_bits(bit_stream: BitStream) -> bytes:
     return bytes(
         get_byte(bits) for bits in chunk(bit_stream, n=8)
     )
+
+
+def get_relative_frequencies(message: Iterable[H]) -> dict[H, float]:
+    counter = Counter(message)
+    n = sum(counter.values())
+    return {
+        symbol: count / n
+        for symbol, count in counter.items()
+    }
