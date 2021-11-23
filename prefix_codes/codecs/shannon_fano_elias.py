@@ -2,9 +2,8 @@ import pickle
 from collections.abc import Iterable, Callable
 from itertools import takewhile
 from math import log2, ceil
-from typing import Generic, OrderedDict, Optional, Any, Literal
+from typing import Generic, OrderedDict, Literal
 
-from prefix_codes.binary_tree import BinaryTree
 from prefix_codes.codecs.base import BaseCodec, T
 
 
@@ -20,14 +19,19 @@ class ShannonFanoEliasCodec(BaseCodec, Generic[T]):
         self.model = model
 
     @classmethod
-    def deserialize(cls, serialization: bytes) -> 'ShannonFanoEliasCodec[T]':
+    def decode_byte_stream(cls, serialization: bytes) -> Iterable[T]:
         probabilities: OrderedDict[T, float]
         model: Literal['iid', 'markov', 'func']
-        probabilities, model = pickle.loads(serialization)
-        return cls(probabilities, model)
+        K: int
 
-    def serialize(self) -> bytes:
-        return pickle.dumps([self.probabilities, self.model])
+        codec_data, enc_message, message_length = cls.parse_byte_stream(serialization)
+        probabilities, model, K = pickle.loads(codec_data)
+        codec = cls(probabilities, model)
+        return codec.decode(enc_message, num_bits=K, max_length=message_length)
+
+    def serialize_codec_data(self, message: Iterable[T]) -> bytes:
+        z, K = self.get_z_and_K(message)
+        return pickle.dumps([self.probabilities, self.model, K])
 
     def get_z_and_K(self, message: Iterable[T]) -> tuple[int, int]:
         W = 1
@@ -106,4 +110,3 @@ class ShannonFanoEliasCodec(BaseCodec, Generic[T]):
                 self.probabilities.items(),
             )
         )
-

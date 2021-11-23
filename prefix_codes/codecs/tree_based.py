@@ -29,10 +29,12 @@ class TreeBasedCodec(BaseCodec, Generic[T]):
         return cls(BinaryTree.from_table(table), table)
 
     @classmethod
-    def deserialize(cls, serialization: bytes) -> 'TreeBasedCodec[T]':
-        return cls.from_tree(pickle.loads(serialization))
+    def decode_byte_stream(cls, serialization: bytes) -> Iterable[T]:
+        codec_data, enc_message, message_length = cls.parse_byte_stream(serialization)
+        codec = cls.from_tree(pickle.loads(codec_data))
+        return codec.decode(enc_message, max_length=message_length)
 
-    def serialize(self) -> bytes:
+    def serialize_codec_data(self, message: Iterable[T]) -> bytes:
         return pickle.dumps(self.tree)
 
     def encode(self, message: Iterable[T]) -> bytes:
@@ -64,35 +66,3 @@ class TreeBasedCodec(BaseCodec, Generic[T]):
             relative_frequencies[symbol] * len(codeword)
             for symbol, codeword in table.items()
         )
-
-
-# class Codec(CodeBasedCodec, Generic[T]):
-#     code: Code[T]
-#
-#     def __init__(self, code: Code[T]):
-#         super().__init__(code)
-#         self.code = code
-#
-#     def encode(self, message: Iterable[T]) -> bytes:
-#         codeword_table = self.code.get_table()
-#
-#         message_only_chars = set(message) - codeword_table.keys()
-#         assert not message_only_chars, f'message contains invalid characters: {message_only_chars}'
-#         bit_stream: BitStream = [
-#             bit
-#             for char in message
-#             for bit in read_bits_from_string(codeword_table[char])
-#         ]
-#         return write_bits(bit_stream)
-#
-#     def decode(self, byte_stream: bytes, max_length: int = None) -> Iterable[T]:
-#         node = self.code.get_tree()
-#         num_chars = 0
-#         for bit in read_bits(byte_stream):
-#             if max_length is not None and num_chars >= max_length:
-#                 break
-#
-#             terminal, node = node.consume_bit(bit)
-#             if terminal is not None:
-#                 yield terminal
-#                 num_chars += 1
