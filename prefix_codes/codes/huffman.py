@@ -16,5 +16,7 @@ def create_huffman_tree(message: Iterable[T]) -> BinaryTree[T, float]:
         orphans |= {Node(children=[a, b], meta=a.meta + b.meta)}
     tree = orphans.pop()
     tree.set_root(tree)
+    # TODO: assert full binary tree structure
+    # assert tree.is_full_binary, ''
     # print('huffman tree', tree)
     return tree
