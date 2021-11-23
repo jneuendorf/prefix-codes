@@ -13,10 +13,13 @@ class ShannonFanoEliasCodec(BaseCodec, Generic[T]):
     probabilities: OrderedDict[T, float]
     model: Literal['iid', 'markov', 'func']
     """Iterative refinement in practice, see slide 33"""
+    is_prefix_free: bool
 
-    def __init__(self, probabilities: OrderedDict[T, float], model: Literal['iid', 'markov', 'func'] = 'iid'):
+    def __init__(self, probabilities: OrderedDict[T, float], model: Literal['iid', 'markov', 'func'] = 'iid',
+                 prefix_free: bool = False):
         self.probabilities = probabilities
         self.model = model
+        self.is_prefix_free = prefix_free
 
     @classmethod
     def decode_byte_stream(cls, serialization: bytes) -> Iterable[T]:
@@ -41,8 +44,12 @@ class ShannonFanoEliasCodec(BaseCodec, Generic[T]):
             p = self.p(symbol, prev_symbols)
             L += W * self.c(symbol, prev_symbols)
             W *= p
+
         K = ceil(-log2(W))
+        if self.is_prefix_free:
+            K += 1
         z = ceil(L * 2 ** K)
+
         return z, K
 
     def encode(self, message: Iterable[T]) -> bytes:
@@ -52,12 +59,10 @@ class ShannonFanoEliasCodec(BaseCodec, Generic[T]):
         z: integer value of the codeword
         K: number of bits in codeword
         """
-        print([s for s in message])
-        print(self.probabilities)
+
         assert all(symbol in self.probabilities for symbol in message), 'message contains invalid symbols'
 
         z, K = self.get_z_and_K(message)
-        print(bin(z))
         return z.to_bytes(ceil(K / 8), byteorder='big')
 
     def decode(self, byte_stream: bytes, *, max_length: int = None, num_bits: int = None) -> Iterable[T]:
@@ -68,7 +73,7 @@ class ShannonFanoEliasCodec(BaseCodec, Generic[T]):
             M = num_bits
 
         z = int.from_bytes(byte_stream, byteorder='big')
-        v = z * 2**(-M)
+        v = z * (2 ** (-M))
         W = 1
         L = 0
 

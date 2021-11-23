@@ -8,9 +8,6 @@ from prefix_codes.codes.huffman import create_huffman_tree
 
 class TestStringMethods(unittest.TestCase):
 
-    # def setUp(self) -> None:
-    #     ...
-
     def test_manual_codec_correctness(self):
         """
         words = [
@@ -108,7 +105,7 @@ class TestStringMethods(unittest.TestCase):
         self.assertAlmostEqual(codec.get_average_codeword_length(message), 4.596, places=3)
 
     def test_huffman_encode_decode_file(self):
-        max_length = 2**10
+        max_length = 2 ** 10
         with open('prefix_codes/tests/englishText.txt', 'rb') as file:
             message = file.read(max_length)
         codec = TreeBasedCodec.from_tree(create_huffman_tree(message))
@@ -143,6 +140,27 @@ class TestStringMethods(unittest.TestCase):
             encoded,
             int('111000100', 2).to_bytes(len(encoded), byteorder='big'),
         )
+        self.assertEqual(
+            bytes(codec.decode(encoded, num_bits=K, max_length=len(message))),
+            message
+        )
+
+    def test_shannon_fano_elias_exercise(self):
+        message = b'REFEREE'
+        probabilities = OrderedDict([
+            (ord('E'), 5 / 8),
+            (ord('R'), 2 / 8),
+            (ord('F'), 1 / 8),
+        ])
+        codec = ShannonFanoEliasCodec(probabilities, model='iid', prefix_free=True)
+        encoded = codec.encode(message)
+        z, K = codec.get_z_and_K(message)
+        print(
+            'binary representation of encode("REFEREE") =',
+            bin(int.from_bytes(encoded, byteorder='big')),
+            f'({K} bits)',
+        )
+
         self.assertEqual(
             bytes(codec.decode(encoded, num_bits=K, max_length=len(message))),
             message
