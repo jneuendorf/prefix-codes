@@ -1,18 +1,24 @@
 # prefix-codes
 
 
-Python prefix codes codec with explicit codeword table using a binary tree.
+Python prefix codes codecs:
 
-148 lines of code (`cat **/*.py | grep -v '^$' | wc -l`).
+- with explicit codeword table
+- Huffman
+- Shannon-Fano-Elias
+
+126 lines of code (`cat **/*.py | grep -v '^$' | wc -l`).
 
 
 ## How to use
 
 ```bash
 python3 ./main.py
+
+make test
 ```
 
 
 ## Requirements
 
-- Python >= 3.9
+- Python >= 3.10
