@@ -1,30 +1,12 @@
 import unittest
-from pprint import pprint
+from collections import OrderedDict
 
-from prefix_codes.codec import Codec
-from prefix_codes.codes.huffman import HuffmanCode
-from prefix_codes.codes.manual import ManualCode
-from prefix_codes.utils import read_bits
+from prefix_codes.codecs.shannon_fano_elias import ShannonFanoEliasCodec
+from prefix_codes.codecs.tree_based import TreeBasedCodec
+from prefix_codes.codes.huffman import create_huffman_tree
 
 
 class TestStringMethods(unittest.TestCase):
-
-    def setUp(self) -> None:
-        self.manual_codec = Codec(ManualCode({
-            'a': '00',
-            'b': '01',
-            'c': '100',
-            'd': '101',
-            'e': '110',
-            'f': '111',
-        }))
-        self.words = [
-            'a',  # => 00 == 0
-            'ab',  # => 10 00 == 8
-            'ffa',  # => 00 111 111 == 63
-            'deadbeef',  # => 111 110 110 01 101 00 110 101 = 111110 11001101 00110101 == 62 205 53
-            'bad cafe bad face bed fed'.replace(' ', ''),
-        ]
 
     def test_manual_codec_correctness(self):
         """
@@ -36,9 +18,23 @@ class TestStringMethods(unittest.TestCase):
             'bad cafe bad face bed fed'.replace(' ', ''),
         ]
         """
-        codec = self.manual_codec
+        codec = TreeBasedCodec.from_table({
+            'a': '00',
+            'b': '01',
+            'c': '100',
+            'd': '101',
+            'e': '110',
+            'f': '111',
+        })
+        words = [
+            'a',  # => 00 == 0
+            'ab',  # => 10 00 == 8
+            'ffa',  # => 00 111 111 == 63
+            'deadbeef',  # => 111 110 110 01 101 00 110 101 = 111110 11001101 00110101 == 62 205 53
+            'bad cafe bad face bed fed'.replace(' ', ''),
+        ]
 
-        for word in self.words:
+        for word in words:
             encoded = codec.encode(word)
             # print('word:', word)
             # print('encoded', ''.join(
@@ -49,7 +45,15 @@ class TestStringMethods(unittest.TestCase):
 
     def test_prefix_codes_codec_with_invalid_chars(self):
         with self.assertRaises(AssertionError):
-            self.manual_codec.encode('invalid characters!')
+            codec = TreeBasedCodec.from_table({
+                'a': '00',
+                'b': '01',
+                'c': '100',
+                'd': '101',
+                'e': '110',
+                'f': '111',
+            })
+            codec.encode('invalid characters!')
 
     def test_huffman_codec_correctness(self):
         """
@@ -61,7 +65,7 @@ class TestStringMethods(unittest.TestCase):
         l = 5/3 = 1,666
         """
         message = b'aabc'
-        codec = Codec(HuffmanCode(message))
+        codec = TreeBasedCodec.from_tree(create_huffman_tree(message))
         # print('huffman tree', codec.tree)
         encoded = codec.encode(message)
         # print(encoded)
@@ -73,12 +77,12 @@ class TestStringMethods(unittest.TestCase):
 
     def test_huffmann_codec_average_codeword_length(self):
         message = b'aabc'
-        codec = Codec(HuffmanCode(message))
-        self.assertEqual(codec.average_codeword_length, 1.5)
+        codec = TreeBasedCodec.from_tree(create_huffman_tree(message))
+        self.assertEqual(codec.get_average_codeword_length(message), 1.5)
 
     def test_huffmann_codec_table(self):
         message = b'aabc'
-        codec = Codec(HuffmanCode(message))
+        codec = TreeBasedCodec.from_tree(create_huffman_tree(message))
         table: dict[str, str] = {
             chr(byte_value): codeword
             for byte_value, codeword in codec.table.items()
@@ -91,23 +95,73 @@ class TestStringMethods(unittest.TestCase):
     def test_huffman_with_file_english_text(self):
         with open('prefix_codes/tests/englishText.txt', 'rb') as file:
             message = file.read()
-        codec = Codec(HuffmanCode(message))
-        print('------------------------------------------------------')
-        print('Codeword table for prefix_codes/tests/englishText.txt:')
-        pprint(codec.table)
-        print('-------------------------')
-        print('Average code word length:')
-        print(codec.average_codeword_length)
-        self.assertAlmostEqual(codec.average_codeword_length, 4.596, places=3)
+        codec = TreeBasedCodec.from_tree(create_huffman_tree(message))
+        # print('------------------------------------------------------')
+        # print('Codeword table for prefix_codes/tests/englishText.txt:')
+        # pprint(codec.table)
+        # print('-------------------------')
+        # print('Average code word length:')
+        # print(codec.average_codeword_length)
+        self.assertAlmostEqual(codec.get_average_codeword_length(message), 4.596, places=3)
+
+    def test_huffman_encode_decode_file(self):
+        max_length = 2 ** 10
+        with open('prefix_codes/tests/englishText.txt', 'rb') as file:
+            message = file.read(max_length)
+        codec = TreeBasedCodec.from_tree(create_huffman_tree(message))
+        self.assertEqual(
+            bytes(codec.decode(codec.encode(message), max_length=max_length)),
+            message
+        )
 
     def test_huffman_with_file_image_data(self):
         with open('prefix_codes/tests/imageData.raw', 'rb') as file:
             message = file.read()
-        codec = Codec(HuffmanCode(message))
-        print('------------------------------------------------------')
-        print('Codeword table for prefix_codes/tests/englishText.txt:')
-        pprint(codec.table)
-        print('-------------------------')
-        print('Average code word length:')
-        print(codec.average_codeword_length)
-        self.assertAlmostEqual(codec.average_codeword_length, 7.634, places=3)
+        codec = TreeBasedCodec.from_tree(create_huffman_tree(message))
+        # print('------------------------------------------------------')
+        # print('Codeword table for prefix_codes/tests/englishText.txt:')
+        # pprint(codec.table)
+        # print('-------------------------')
+        # print('Average code word length:')
+        # print(codec.average_codeword_length)
+        self.assertAlmostEqual(codec.get_average_codeword_length(message), 7.634, places=3)
+
+    def test_shannon_fano_elias_encode_decode(self):
+        message = b'banana'
+        probabilities = OrderedDict([
+            (ord('a'), 1 / 2),
+            (ord('n'), 1 / 3),
+            (ord('b'), 1 / 6),
+        ])
+        codec = ShannonFanoEliasCodec(probabilities, model='iid')
+        encoded = codec.encode(message)
+        z, K = codec.get_z_and_K(message)
+        self.assertEqual(
+            encoded,
+            int('111000100', 2).to_bytes(len(encoded), byteorder='big'),
+        )
+        self.assertEqual(
+            bytes(codec.decode(encoded, num_bits=K, max_length=len(message))),
+            message
+        )
+
+    def test_shannon_fano_elias_exercise(self):
+        message = b'REFEREE'
+        probabilities = OrderedDict([
+            (ord('E'), 5 / 8),
+            (ord('R'), 2 / 8),
+            (ord('F'), 1 / 8),
+        ])
+        codec = ShannonFanoEliasCodec(probabilities, model='iid', prefix_free=True)
+        encoded = codec.encode(message)
+        z, K = codec.get_z_and_K(message)
+        print(
+            'binary representation of encode("REFEREE") =',
+            bin(int.from_bytes(encoded, byteorder='big')),
+            f'({K} bits)',
+        )
+
+        self.assertEqual(
+            bytes(codec.decode(encoded, num_bits=K, max_length=len(message))),
+            message
+        )
