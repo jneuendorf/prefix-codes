@@ -27,7 +27,7 @@ def get_byte(bit_stream: BitStream) -> int:
     return byte
 
 
-def read_bits(message: bytes) -> BitStream:
+def read_bits(message: Iterable[int]) -> BitStream:
     # return ((byte >> i) & 1 for byte in message for i in range(8))
     return (get_bit(byte, i) for byte in message for i in range(8))
 

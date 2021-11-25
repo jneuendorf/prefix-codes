@@ -7,15 +7,18 @@ from typing import Generic, OrderedDict, Literal
 from prefix_codes.codecs.base import BaseCodec, T
 
 
+ModelType = Literal['iid', 'markov', 'func']
+
+
 class ShannonFanoEliasCodec(BaseCodec, Generic[T]):
     """See 05-SpecialVLCodes.pdf"""
 
     probabilities: OrderedDict[T, float]
-    model: Literal['iid', 'markov', 'func']
+    model: ModelType
     """Iterative refinement in practice, see slide 33"""
     is_prefix_free: bool
 
-    def __init__(self, probabilities: OrderedDict[T, float], model: Literal['iid', 'markov', 'func'] = 'iid',
+    def __init__(self, probabilities: OrderedDict[T, float], model: ModelType = 'iid',
                  prefix_free: bool = False):
         self.probabilities = probabilities
         self.model = model
@@ -24,7 +27,7 @@ class ShannonFanoEliasCodec(BaseCodec, Generic[T]):
     @classmethod
     def decode_byte_stream(cls, serialization: bytes) -> Iterable[T]:
         probabilities: OrderedDict[T, float]
-        model: Literal['iid', 'markov', 'func']
+        model: ModelType
         K: int
 
         codec_data, enc_message, message_length = cls.parse_byte_stream(serialization)
@@ -51,6 +54,10 @@ class ShannonFanoEliasCodec(BaseCodec, Generic[T]):
         z = ceil(L * 2 ** K)
 
         return z, K
+
+    def get_num_codeword_bits(self, message: Iterable[T]) -> int:
+        z, K = self.get_z_and_K(message)
+        return K
 
     def encode(self, message: Iterable[T]) -> bytes:
         """See slide 34.
