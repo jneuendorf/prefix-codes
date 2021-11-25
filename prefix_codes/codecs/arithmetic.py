@@ -6,7 +6,7 @@ from typing import Generic
 from prefix_codes.codecs.base import T
 from prefix_codes.codecs.shannon_fano_elias import ShannonFanoEliasCodec, ModelType
 from prefix_codes.typedefs import BitStream, Bit
-from prefix_codes.utils import set_bit, write_bits, read_bits, read_bits_from_string
+from prefix_codes.utils import set_bit, write_bits, read_bits_from_string
 
 
 def bit_string(n: int, bits: int = 0) -> str:
@@ -95,13 +95,6 @@ class ArithmeticCodec(ShannonFanoEliasCodec, Generic[T]):
 
             B_ast, c, new_bits = handle_carry(B_ast, U + V + 1, c)
             bit_stream.extend(new_bits)
-            # carry = int(bit_string(B_ast, U + V + 1)[0])
-            # if carry == 1:
-            #     B_ast = set_bit(B_ast, U + V + 1, 0)
-            #     bit_stream.append(1)
-            #     c -= 1
-            #     if c > 1:
-            #         bit_stream.extend([0] * (c - 1))
 
             if delta_z > 0:
                 B_ast_z_leading_bits = bit_string(B, U + V)[:delta_z]
