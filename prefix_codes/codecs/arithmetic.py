@@ -6,7 +6,7 @@ from typing import Generic
 from prefix_codes.codecs.base import T
 from prefix_codes.codecs.shannon_fano_elias import ShannonFanoEliasCodec, ModelType
 from prefix_codes.typedefs import BitStream, Bit
-from prefix_codes.utils import set_bit, write_bits, read_bits_from_string
+from prefix_codes.utils import set_bit, write_bits, read_bits_from_string, read_bits
 
 
 def bit_string(n: int, bits: int = 0) -> str:
@@ -89,15 +89,20 @@ class ArithmeticCodec(ShannonFanoEliasCodec, Generic[T]):
 
         # ITERATIVE ENCODING
         for symbol in message:
+            # CALCULATE
             A_ast = A * self.p_V[symbol]
             B_ast = B + A * self.c_V[symbol]
+
+            # DETERMINE NUMBER OF LEADING ZERO BITS
             delta_z = leading_zeros(A_ast, U + V)
 
+            # CHECK FOR CARRY BIT
             B_ast, c, new_bits = handle_carry(B_ast, U + V + 1, c)
             bit_stream.extend(new_bits)
 
+            # INVESTIGATE delta_z LEADING ZERO BITS
             if delta_z > 0:
-                B_ast_z_leading_bits = bit_string(B, U + V)[:delta_z]
+                B_ast_z_leading_bits = bit_string(B_ast, U + V)[:delta_z]
                 n_1 = trailing_ones(int(B_ast_z_leading_bits, 2), delta_z)
                 if n_1 < delta_z:
                     bit_stream.extend(read_bits_from_string(bit_string(c)))
@@ -111,6 +116,7 @@ class ArithmeticCodec(ShannonFanoEliasCodec, Generic[T]):
                     bit_stream.extend(read_bits_from_string(B_ast_z_leading_bits))
                     c = 0
 
+            # UPDATE PARAMETERS
             A = A_ast >> (V - delta_z)
             B = (B_ast << delta_z) & mask
 
@@ -129,4 +135,28 @@ class ArithmeticCodec(ShannonFanoEliasCodec, Generic[T]):
         return write_bits(bit_stream)
 
     def decode(self, byte_stream: bytes, *, max_length: int = None, num_bits: int = None) -> Iterable[T]:
-        ...
+        V = self.V
+        U = self.U
+
+        # INIT
+        A = 2 ** U - 1
+        u = int(
+            ''.join(
+                str(bit) for bit in itertools.islice(read_bits(byte_stream), U + V)
+            ),
+            base=2,
+        )
+
+        # ITERATIVE DECODING
+        for symbol in self.probabilities:
+            # IDENTIFY NEXT SYMBOL
+            U = A * (self.c_V[symbol] + self.p_V[symbol])
+            if u < U:
+                yield symbol
+                break
+
+            # UPDATE PARAMETERS
+            A_ast = A * self.p_V[symbol]
+            delta_z = leading_zeros(A_ast, U + V)
+            u = (u - A * self.c_V[symbol]) << delta_z
+            A = A_ast >> (V - delta_z)
