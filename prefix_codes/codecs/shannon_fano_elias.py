@@ -59,7 +59,7 @@ class ShannonFanoEliasCodec(BaseCodec, Generic[T]):
         z, K = self.get_z_and_K(message)
         return K
 
-    def encode(self, message: Iterable[T]) -> bytes:
+    def encode(self, message: Iterable[T], *, max_length: int = None) -> bytes:
         """See slide 34.
         W: interval width W_i, the current value in W_0, ..., W_N
         L: lower interval bound L_i, the current value in L_0, ..., L_N

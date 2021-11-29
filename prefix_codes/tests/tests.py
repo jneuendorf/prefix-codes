@@ -1,10 +1,12 @@
 import unittest
 from collections import OrderedDict
+from pprint import pprint
 
 from prefix_codes.codecs.arithmetic import ArithmeticCodec
 from prefix_codes.codecs.shannon_fano_elias import ShannonFanoEliasCodec
 from prefix_codes.codecs.tree_based import TreeBasedCodec
 from prefix_codes.codes.huffman import create_huffman_tree
+from prefix_codes.utils import read_bits, get_relative_frequencies
 
 
 class TestCodecs(unittest.TestCase):
@@ -201,24 +203,21 @@ class TestCodecs(unittest.TestCase):
         encoded = codec.encode(message)
         # K = codec.get_num_codeword_bits(message)
         K = 9
-        print(bin(encoded[0]))
-        print(bin(encoded[1]))
         print(
             '[arithmetic] binary representation of encode("BANANA") =',
             bin(int.from_bytes(encoded, byteorder='big')),
             f'({K} bits)',
         )
-        # self.assertEqual(
-        #     encoded,
-        #     int('110100000', 2).to_bytes(len(encoded), byteorder='big'),
-        # )
-        # self.assertEqual(encoded, b'')
+        self.assertEqual(
+            ''.join([str(bit) for bit in read_bits(encoded)][:K]),
+            '110100000',
+        )
 
     def test_arithmetic_encode_decode(self):
         A = ord('A')
         N = ord('N')
         B = ord('B')
-        codec = ArithmeticCodec(
+        codec: ArithmeticCodec[int] = ArithmeticCodec(
             V=4,
             U=4,
             probabilities=OrderedDict([
@@ -229,10 +228,25 @@ class TestCodecs(unittest.TestCase):
             prefix_free=False,
         )
         message = b'BANANA'
-        encoded = codec.encode(message)
+        encoded = codec.encode(message, max_length=len(message))
         # K = codec.get_num_codeword_bits(message)
         K = 9
         self.assertEqual(
             bytes(codec.decode(encoded, num_bits=K, max_length=len(message))),
             message
         )
+
+    def test_arithmetic_with_audio_file(self):
+        with open('prefix_codes/tests/Queen_sint8.raw', 'rb') as file:
+            message = file.read()
+
+        num_samples = len(message)
+        relative_frequencies: dict[int, float] = get_relative_frequencies(message)
+        codec: ArithmeticCodec[int] = ArithmeticCodec(
+            U=32,
+            V=32,
+            probabilities=OrderedDict(relative_frequencies),
+        )
+        # pprint(relative_frequencies)
+        compression_ratio = num_samples / len(codec.encode(message, max_length=num_samples))
+        self.assertGreater(compression_ratio, 1)

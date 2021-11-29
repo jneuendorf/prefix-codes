@@ -28,7 +28,7 @@ class BaseCodec(ABC, Generic[T]):
         ...
 
     @abstractmethod
-    def encode(self, message: Iterable[T]) -> bytes:
+    def encode(self, message: Iterable[T], *, max_length: int = None) -> bytes:
         ...
 
     @abstractmethod

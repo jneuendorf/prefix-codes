@@ -8,4 +8,8 @@
     <orderEntry type="jdk" jdkName="Python 3.10 (prefix-codes)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
+  <component name="PackageRequirementsSettings">
+    <option name="requirementsPath" value="$MODULE_DIR$/prefix_codes/requirements.txt" />
+    <option name="modifyBaseFiles" value="true" />
+  </component>
 </module>

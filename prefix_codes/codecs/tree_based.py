@@ -37,7 +37,7 @@ class TreeBasedCodec(BaseCodec, Generic[T]):
     def serialize_codec_data(self, message: Iterable[T]) -> bytes:
         return pickle.dumps(self.tree)
 
-    def encode(self, message: Iterable[T]) -> bytes:
+    def encode(self, message: Iterable[T], *, max_length: int = None) -> bytes:
         message_only_chars = set(message) - self.table.keys()
         assert not message_only_chars, f'message contains invalid characters: {message_only_chars}'
         bit_stream: BitStream = [
