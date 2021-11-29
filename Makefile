@@ -34,3 +34,8 @@ help:
 .PHONY: test
 test:
 	python3 -m unittest prefix_codes.tests.tests
+
+.PHONY: test2
+test2:
+	python3 -m unittest prefix_codes.tests.tests.TestCodecs.test_arithmetic_encode_decode
+
