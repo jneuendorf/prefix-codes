@@ -74,7 +74,7 @@ class ArithmeticCodec(ShannonFanoEliasCodec, Generic[T]):
             symbol: accumulated_ps[i]
             for i, symbol in enumerate(self.probabilities)
         }
-        assert all(p > 0 for p in self.p_V.values()), 'all must probabilities must be > 0'
+        assert all(p > 0 for p in self.p_V.values()), 'all must probabilities must be > 0. Try a greater precision'
         assert sum(self.p_V.values()) <= 2 ** self.V, 'invalid quantization'
 
     def get_num_codeword_bits(self, message: Iterable[T]) -> int:
@@ -106,8 +106,8 @@ class ArithmeticCodec(ShannonFanoEliasCodec, Generic[T]):
             # print('A*', A_ast)
             # print('B*', B_ast)
 
-            # DETERMINE NUMBER OF LEADING ZERO BITS
-            delta_z = leading_zeros(A_ast, U + V)
+            # DETERMINE NUMBER OF LEADING ZERO BITS (check at most V bits)
+            delta_z = min(leading_zeros(A_ast, U + V), V)
             # print('∆z', delta_z)
 
             # CHECK FOR CARRY BIT

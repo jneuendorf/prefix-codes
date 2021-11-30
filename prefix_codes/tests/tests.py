@@ -243,8 +243,8 @@ class TestCodecs(unittest.TestCase):
         num_samples = len(message)
         relative_frequencies: dict[int, float] = get_relative_frequencies(message)
         codec: ArithmeticCodec[int] = ArithmeticCodec(
-            U=32,
-            V=32,
+            U=24,
+            V=24,
             probabilities=OrderedDict(relative_frequencies),
         )
         # pprint(relative_frequencies)
