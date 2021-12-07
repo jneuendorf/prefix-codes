@@ -8,7 +8,7 @@ from tqdm import tqdm
 from prefix_codes.codecs.base import T
 from prefix_codes.codecs.shannon_fano_elias import ShannonFanoEliasCodec, ModelType
 from prefix_codes.typedefs import BitStream, Bit
-from prefix_codes.utils import set_bit, write_bits, read_bits_from_string, read_bits
+from prefix_codes.utils import write_bits, read_bits_from_string, read_bits
 
 
 def bit_string(n: int, bits: int = 0) -> str:
@@ -164,13 +164,9 @@ class ArithmeticCodec(ShannonFanoEliasCodec, Generic[T]):
         X = U + V - a - 1
         if '1' in bit_string(B, U + V)[-X:]:
             B += (1 << X)  # round up lower interval boundary
-            # print('B', bin(B))
-        B, c, new_bits = handle_carry(B, U + V + 1, c)
-        # print('B', bin(B))
-        # B_ast = B + (1 << X)
-        # B_ast, c, new_bits = handle_carry(B_ast, U + V + 1, c)
-        # print('updated c', c)
-        bit_stream.extend(new_bits)
+            B, c, new_bits = handle_carry(B, U + V + 1, c)
+            # print('updated c', c)
+            bit_stream.extend(new_bits)
 
         # print('update bitstream', bit_stream)
         # output all outstanding bits
