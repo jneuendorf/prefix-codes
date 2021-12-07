@@ -3,9 +3,10 @@ from collections import OrderedDict
 from unittest import skip
 
 import numpy as np
+import scipy.stats
 
 from prefix_codes.codecs.arithmetic import ArithmeticCodec
-from prefix_codes.codecs.predictive import optimal_affine_predictor, optimal_affine_predictor_statistics
+from prefix_codes.codecs.predictive import optimal_affine_predictor, optimal_affine_predictor_params
 from prefix_codes.codecs.shannon_fano_elias import ShannonFanoEliasCodec
 from prefix_codes.codecs.tree_based import TreeBasedCodec
 from prefix_codes.codes.huffman import create_huffman_tree
@@ -275,22 +276,29 @@ class TestCodecs(unittest.TestCase):
             message = file.read()
 
         data = np.array([
-            # (unsigned - 256 if unsigned > 127 else unsigned)
-            # for unsigned in message
-            int.from_bytes(message[i:i+2], byteorder='little', signed=True)
+            int.from_bytes(
+                message[i:i+2],
+                byteorder='little',  # encoded on MS Windows
+                signed=True,
+            )
             for i in range(0, len(message), 2)
         ])
-        # print(data)
-
-        stats = optimal_affine_predictor_statistics(
+        predictor = optimal_affine_predictor(
             data,
-            correlations=[
+            observations=[
                 (-1,),
                 (-2,),
                 (-3,),
             ],
         )
-        print(stats)
+        prediction = np.array([
+            predictor(index)
+            for index in np.ndindex(*data.shape)
+        ])
+        print('pred mean', np.mean(prediction))  # -36.46424950132979
+        print('pred var', np.var(prediction))  # 21906574.72860262
+        print('pred std', np.std(prediction))  # 4680.4459967616995
+        print('pred entropy', scipy.stats.entropy(data))  # -inf
 
     @skip('')
     def test_predictive_codec_predictor_lena(self):
@@ -314,9 +322,9 @@ class TestCodecs(unittest.TestCase):
         img = np.array(data).reshape((height, width))
         print(img)
 
-        stats = optimal_affine_predictor_statistics(
+        stats = optimal_affine_predictor_params(
             np.array(img),
-            correlations=[
+            observations=[
                 # (y, x)
                 (0, -1),  # hor
                 (-1, 0),  # ver
