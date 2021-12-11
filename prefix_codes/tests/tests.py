@@ -5,8 +5,9 @@ from unittest import skip
 import numpy as np
 import scipy.stats
 
-from prefix_codes.codecs.arithmetic import ArithmeticCodec
-from prefix_codes.codecs.predictive import optimal_affine_predictor, optimal_affine_predictor_params
+from prefix_codes.codecs.arithmetic import ArithmeticCodec, ArithmeticAdaptivePmfCodec
+from prefix_codes.codecs.predictive import optimal_affine_predictor_factory, left_and_above_avg_predictor, \
+    PredictiveImageCodec
 from prefix_codes.codecs.shannon_fano_elias import ShannonFanoEliasCodec
 from prefix_codes.codecs.tree_based import TreeBasedCodec
 from prefix_codes.codes.huffman import create_huffman_tree
@@ -283,7 +284,7 @@ class TestCodecs(unittest.TestCase):
             )
             for i in range(0, len(message), 2)
         ])
-        predictor = optimal_affine_predictor(
+        predictor = optimal_affine_predictor_factory(
             data,
             observations=[
                 (-1,),
@@ -300,7 +301,7 @@ class TestCodecs(unittest.TestCase):
         print('pred std', np.std(prediction))  # 4680.4459967616995
         print('pred entropy', scipy.stats.entropy(data))  # -inf
 
-    @skip('')
+    # @skip('')
     def test_predictive_codec_predictor_lena(self):
         """07-PredictiveCoding.pdf, slide 28"""
 
@@ -322,17 +323,17 @@ class TestCodecs(unittest.TestCase):
         img = np.array(data).reshape((height, width))
         print(img)
 
-        stats = optimal_affine_predictor_params(
-            np.array(img),
-            observations=[
-                # (y, x)
-                (0, -1),  # hor
-                (-1, 0),  # ver
-                (-1, -1),  # al
-                (-1, 1),  # ar
-            ],
-        )
-        print(stats)
+        # stats = optimal_affine_predictor_params(
+        #     np.array(img),
+        #     observations=[
+        #         # (y, x)
+        #         (0, -1),  # hor
+        #         (-1, 0),  # ver
+        #         (-1, -1),  # al
+        #         (-1, 1),  # ar
+        #     ],
+        # )
+        # print(stats)
 
         # pred = optimal_affine_predictor(
         #     np.array(list(message)),
@@ -341,10 +342,34 @@ class TestCodecs(unittest.TestCase):
         #         lambda index: (index[0] - 2,),
         #     ],
         # )
+        # predictor = left_and_above_avg_predictor(img)
+        predictions = np.array([
+            left_and_above_avg_predictor(index, img)
+            for index in np.ndindex(*img.shape)
+        ]).reshape((height, width))
+        prediction_errors = img - predictions
+        print(prediction_errors)
+
+        codec = PredictiveImageCodec(
+            # predictor=cast(
+            #     Callable[[tuple[int, int], Iterable[int]], int],
+            #     left_and_above_avg_predictor,
+            # ),
+            predictor=left_and_above_avg_predictor,
+            prediction_error_codec=ArithmeticAdaptivePmfCodec(
+                V=4,
+                U=4,
+                probabilities=OrderedDict(),
+                prefix_free=False,
+            ),
+        )
+        # print(
+        #     img - (np.roll(img, (0, -1)) + np.roll(img, (-1, 0))) // 2
+        # )
 
     @skip('')
     def test_predictive_codec_predictor(self):
-        pred = optimal_affine_predictor(
+        pred = optimal_affine_predictor_factory(
             np.array([0, 1, 2, 3, 0, 4, 1, 5, 6, 7, 8, 9]),
             observations=[
                 lambda index: (index[0] - 1,),

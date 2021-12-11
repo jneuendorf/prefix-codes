@@ -1,14 +1,19 @@
 from collections.abc import Callable, Collection, Iterable
-from typing import Generic, TypeVar
+from collections.abc import Iterator
+from typing import TypeVar, Protocol, ParamSpec, Concatenate
 
 import numpy as np
+import numpy.typing as npt
 from numpy.linalg import linalg
 
 from prefix_codes.codecs.base import BaseCodec
 from prefix_codes.codecs.base import T
 
 I = TypeVar('I', bound=Collection[int])
-PredictorType = Callable[[I], int]
+P = ParamSpec('P')
+
+PredictorType = Callable[[I, Iterable[T]], int]
+PredictorFactory = Callable[Concatenate[Iterable[T], P], PredictorType]
 
 
 def optimal_affine_predictor_params(
@@ -49,7 +54,7 @@ def optimal_affine_predictor_params(
     )
 
 
-def optimal_affine_predictor(
+def optimal_affine_predictor_factory(
     source: np.ndarray,
     # Maps current sample index to an already observed sample's index.
     # TODO: Use np.roll https://numpy.org/doc/stable/reference/generated/numpy.roll.html
@@ -62,7 +67,7 @@ def optimal_affine_predictor(
     prediction_params: np.ndarray = params['a']
     observation_sets: np.ndarray = params['B_n']
 
-    def predictor(index: I) -> int:
+    def predictor(index: I, source: Iterable[T]) -> int:
         return round(
             offset + (
                 prediction_params @ np.array([
@@ -74,21 +79,73 @@ def optimal_affine_predictor(
     return predictor
 
 
-class PredictiveCodec(BaseCodec, Generic[T]):
-    predictor: PredictorType
+def left_and_above_avg_predictor(index: I, source: npt.NDArray[int]) -> int:
+    """Assume source.shape == (height, width)."""
 
-    def __init__(self, predictor: PredictorType):
+    assert source.dtype == int, f'expected source of integers but got {source.dtype}'
+
+    y, x = index
+    left: int
+    above: int
+    try:
+        left = source[y, x - 1]
+    except IndexError:
+        left = 0
+    try:
+        above = source[y - 1, x]
+    except IndexError:
+        above = 0
+
+    return (left + above) // 2
+
+
+###############################################################################
+
+
+class SubtractableIterable(Protocol[T]):
+    def __sub__(self, other) -> Iterable[T]:
+        ...
+
+    def __iter__(self) -> Iterator[T]:
+        ...
+
+
+S = TypeVar('S', bound=SubtractableIterable)
+
+
+class PredictiveCodec(BaseCodec[S]):
+    predictor: PredictorType
+    codec: BaseCodec
+
+    def __init__(self, predictor: PredictorType, prediction_error_codec: BaseCodec):
         self.predictor = predictor
+        self.codec = prediction_error_codec
 
     # @classmethod
     # def decode_byte_stream(cls, serialization: bytes) -> Iterable[T]:
     #     ...
 
-    def encode(self, message: Iterable[T], *, max_length: int = None) -> bytes:
-        pass
+    def encode(self, message: S, *, max_length: int = None) -> bytes:
+        return self.encode_prediction_errors(
+            self.get_predictions_errors(message, self.get_predictions(message)),
+            max_length,
+        )
+
+    def get_predictions(self, message: S) -> S:
+        return np.array(self.predictor(sample) for sample in message)
+
+    def get_predictions_errors(self, message: S, predictions: S) -> S:
+        return message - predictions
+
+    def encode_prediction_errors(self, prediction_errors: S, max_length: int = None) -> bytes:
+        return self.codec.encode(prediction_errors, max_length=max_length)
 
     def decode(self, byte_stream: bytes, *, max_length: int = None) -> Iterable[T]:
         pass
 
     # def serialize_codec_data(self, message: Iterable[T]) -> bytes:
     #     ...
+
+
+class PredictiveImageCodec(PredictiveCodec[npt.NDArray[int]]):
+    ...

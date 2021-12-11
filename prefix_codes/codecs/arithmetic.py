@@ -215,3 +215,7 @@ class ArithmeticCodec(ShannonFanoEliasCodec, Generic[T]):
                     A = A_ast >> (V - delta_z)
 
                     break
+
+
+class ArithmeticAdaptivePmfCodec(ArithmeticCodec):
+    ...
