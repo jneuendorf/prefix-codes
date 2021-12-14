@@ -5,11 +5,14 @@ from unittest import skip
 import numpy as np
 import scipy.stats
 
-from prefix_codes.codecs.arithmetic import ArithmeticCodec, ArithmeticAdaptivePmfCodec
+from prefix_codes.codecs.rice import RiceCodec
+from prefix_codes.codecs.arithmetic import ArithmeticCodec
+from prefix_codes.codecs.fixed import FixedCodec
 from prefix_codes.codecs.predictive import optimal_affine_predictor_factory, left_and_above_avg_predictor, \
-    PredictiveImageCodec
+    PredictiveArithmeticImageCodec
 from prefix_codes.codecs.shannon_fano_elias import ShannonFanoEliasCodec
 from prefix_codes.codecs.tree_based import TreeBasedCodec
+from prefix_codes.codecs.unary import UnaryCodec
 from prefix_codes.codes.huffman import create_huffman_tree
 from prefix_codes.utils import read_bits, get_relative_frequencies
 
@@ -184,6 +187,36 @@ class TestCodecs(unittest.TestCase):
             message
         )
 
+    def test_fixed_encode_decode(self):
+        message = b'secret'
+        codec = FixedCodec(alphabet=list(set(message)))
+        encoded = codec.encode(message)
+        self.assertEqual(
+            bytes(codec.decode(encoded, max_length=len(message))),
+            message
+        )
+
+    def test_unary_encode_decode(self):
+        message = b'secret'
+        codec = UnaryCodec(alphabet=list(set(message)))
+        encoded = codec.encode(message)
+        self.assertEqual(
+            bytes(codec.decode(encoded)),
+            message
+        )
+
+    def test_rice_encode_decode(self):
+        message = b'what about this?'
+        codec = RiceCodec(R=2, alphabet=list(set(message)))
+        encoded = codec.encode(message)
+        print(encoded)
+        print(codec.encode_to_bits(message))
+        print(list(codec.decode(encoded, max_length=len(message))))
+        # self.assertEqual(
+        #     bytes(codec.decode(encoded, max_length=len(message))),
+        #     message
+        # )
+
     @skip('')
     def test_arithmetic_quantization(self):
         A = ord('A')
@@ -270,6 +303,7 @@ class TestCodecs(unittest.TestCase):
         compression_ratio = num_samples / len(codec.encode(message, max_length=num_samples))
         self.assertGreater(compression_ratio, 1)
 
+    @skip('')
     def test_predictive_codec_predictor_nirvana(self):
         """07-PredictiveCoding.pdf, slide 24"""
 
@@ -301,7 +335,7 @@ class TestCodecs(unittest.TestCase):
         print('pred std', np.std(prediction))  # 4680.4459967616995
         print('pred entropy', scipy.stats.entropy(data))  # -inf
 
-    # @skip('')
+    @skip('')
     def test_predictive_codec_predictor_lena(self):
         """07-PredictiveCoding.pdf, slide 28"""
 
@@ -321,6 +355,7 @@ class TestCodecs(unittest.TestCase):
         )
         data: list[int] = list(lines[3])
         img = np.array(data).reshape((height, width))
+        print('original image')
         print(img)
 
         # stats = optimal_affine_predictor_params(
@@ -343,29 +378,49 @@ class TestCodecs(unittest.TestCase):
         #     ],
         # )
         # predictor = left_and_above_avg_predictor(img)
+
+        # relative_frequencies: dict[int, float] = get_relative_frequencies(img.reshape(-1))
+        # pprint(set(img.reshape(-1)))
+        # print('rel freq')
+        # pprint(relative_frequencies)
+
         predictions = np.array([
             left_and_above_avg_predictor(index, img)
             for index in np.ndindex(*img.shape)
         ]).reshape((height, width))
         prediction_errors = img - predictions
+        print('prediction_errors')
         print(prediction_errors)
 
-        codec = PredictiveImageCodec(
+        height, width = img.shape
+        codec = PredictiveArithmeticImageCodec(
             # predictor=cast(
             #     Callable[[tuple[int, int], Iterable[int]], int],
             #     left_and_above_avg_predictor,
             # ),
             predictor=left_and_above_avg_predictor,
-            prediction_error_codec=ArithmeticAdaptivePmfCodec(
-                V=4,
-                U=4,
-                probabilities=OrderedDict(),
-                prefix_free=False,
-            ),
+            width=width,
+            height=height,
+            # prediction_error_codec=ArithmeticAdaptivePmfCodec(
+            #     V=24,
+            #     U=24,
+            #     probabilities=OrderedDict(relative_frequencies),
+            #     prefix_free=False,
+            # ),
         )
-        # print(
-        #     img - (np.roll(img, (0, -1)) + np.roll(img, (-1, 0))) // 2
-        # )
+        # print(codec)
+        # print(codec.encode(img))
+        # encoded = codec.encode(img)
+        output = codec.serialize(img)
+        with open('prefix_codes/tests/lena512.pgm.enc', 'wb') as file:
+            file.write(output)
+
+        decoded = codec.decode_byte_stream(output)
+        print('decoded')
+        print(decoded)
+        with open('prefix_codes/tests/lena512_dec.pgm', 'wb') as file:
+            file.writelines(lines[:3])
+            file.writelines([bytes(list(decoded.reshape(-1)))])
 
     @skip('')
     def test_predictive_codec_predictor(self):

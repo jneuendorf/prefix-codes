@@ -31,6 +31,10 @@ sfe:
 help:
 	python3 main.py --help
 
+.PHONY: lint
+lint:
+	mypy ./prefix_codes --show-traceback --show-error-codes
+
 .PHONY: test
 test:
 	python3 -m unittest prefix_codes.tests.tests

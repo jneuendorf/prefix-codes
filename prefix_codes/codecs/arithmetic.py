@@ -74,6 +74,7 @@ class ArithmeticCodec(ShannonFanoEliasCodec, Generic[T]):
             symbol: accumulated_ps[i]
             for i, symbol in enumerate(self.probabilities)
         }
+        assert self.probabilities, 'no probabilities given'
         assert all(p > 0 for p in self.p_V.values()), 'all must probabilities must be > 0. Try a greater precision'
         assert sum(self.p_V.values()) <= 2 ** self.V, 'invalid quantization'
 
@@ -180,6 +181,7 @@ class ArithmeticCodec(ShannonFanoEliasCodec, Generic[T]):
         return write_bits(bit_stream)
 
     def decode(self, byte_stream: bytes, *, max_length: int = None, num_bits: int = None) -> Iterable[T]:
+        assert max_length is not None, 'must provide max_length for arithmetic decoding'
         V = self.V
         UV = self.U + self.V
 

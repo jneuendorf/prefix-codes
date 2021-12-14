@@ -8,6 +8,7 @@ T = TypeVar('T', bound=Hashable)
 META_BYTES = 30
 
 
+# TODO: replace Iterable[T] with T so that subclasses can specify other container types such as numpy arrays
 class BaseCodec(ABC, Generic[T]):
 
     @staticmethod
@@ -37,7 +38,7 @@ class BaseCodec(ABC, Generic[T]):
 
     def serialize(self, message: Iterable[T]) -> bytes:
         codec_data = self.serialize_codec_data(message)
-        message_length = len(list(message))
+        message_length = self.get_message_length(message)
         assert ceil(len(codec_data).bit_length() / 8) <= META_BYTES // 2, (
             f'codec data is too large'
         )
@@ -50,6 +51,9 @@ class BaseCodec(ABC, Generic[T]):
             + codec_data
             + self.encode(message)
         )
+
+    def get_message_length(self, message: Iterable[T]) -> int:
+        return len(list(message))
 
     @abstractmethod
     def serialize_codec_data(self, message: Iterable[T]) -> bytes:
