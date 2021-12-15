@@ -13,7 +13,7 @@ class FixedCodec(BaseCodec):
     codeword_table: dict[H, BitStream]
 
     def __init__(self, alphabet: Sequence[H]):
-        self.num_bits = len(alphabet).bit_length()
+        self.num_bits = (len(alphabet) - 1).bit_length()
         self.codeword_table = {
             sample: list(read_bits_from_string(
                 bit_string(n, self.num_bits)

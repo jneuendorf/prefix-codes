@@ -16,9 +16,11 @@ class RiceCodec(BaseCodec[H]):
         assert R >= 0, 'Rice parameter must be greater or equal to zero'
         self.R = R
         self.alphabet = alphabet
+        # print('Rice -> R =', R)
+        # print(list(range(2 ** R)))
 
         self.unary_codec: UnaryCodec[int] = UnaryCodec(list(range(len(alphabet))))
-        self.fixed_codec: FixedCodec[int] = FixedCodec(list(range(len(alphabet))))
+        self.fixed_codec: FixedCodec[int] = FixedCodec(list(range(2 ** R)))
 
     @classmethod
     def auto_encode(cls, message: Iterable[H], alphabet: Sequence[H], R_max: int = 5) -> tuple['RiceCodec', bytes]:
@@ -63,20 +65,15 @@ class RiceCodec(BaseCodec[H]):
     def decode(self, byte_stream: bytes, *, max_length: int = None) -> Iterable[H]:
         bit_stream = list(read_bits(byte_stream))
         yielded = 0
-        print('decoding')
         while bit_stream:
             if max_length is not None and yielded >= max_length:
                 break
 
             prefix, unary_used_bits = next(self.unary_codec.decode_bits(bit_stream, max_length=1))
-            print('unary', unary_used_bits)
+            bit_stream = bit_stream[unary_used_bits:]
             suffix = next(self.fixed_codec.decode_bits(bit_stream, max_length=1))
-            print('fixed', self.fixed_codec.num_bits)
-            print('>', prefix, suffix)
-            print('>', bit_string(prefix, unary_used_bits), bit_string(suffix, self.fixed_codec.num_bits))
+            bit_stream = bit_stream[self.fixed_codec.num_bits:]
             n = (prefix << self.R) + suffix
-            print('n', n)
-            bit_stream = bit_stream[unary_used_bits + self.fixed_codec.num_bits:]
             yield self.alphabet[n]
             yielded += 1
 

@@ -209,13 +209,28 @@ class TestCodecs(unittest.TestCase):
         message = b'what about this?'
         codec = RiceCodec(R=2, alphabet=list(set(message)))
         encoded = codec.encode(message)
-        print(encoded)
-        print(codec.encode_to_bits(message))
-        print(list(codec.decode(encoded, max_length=len(message))))
-        # self.assertEqual(
-        #     bytes(codec.decode(encoded, max_length=len(message))),
-        #     message
-        # )
+        self.assertEqual(
+            bytes(codec.decode(encoded, max_length=len(message))),
+            message
+        )
+
+    def test_rice_auto_encode_decode(self):
+        message = (
+            b'this message is rather long '
+            b'so different values of R result in a measurable difference in bit length.\n'
+            b'well...let\'s be sure'
+        )
+        alphabet = list(set(message))
+        codec, encoded = RiceCodec.auto_encode(message, alphabet)
+        self.assertEqual(
+            bytes(codec.decode(encoded, max_length=len(message))),
+            message
+        )
+        optimal_R = codec.R
+        self.assertLessEqual(
+            len(codec.encode_to_bits(message)),
+            len(RiceCodec(R=optimal_R + 1, alphabet=alphabet).encode_to_bits(message))
+        )
 
     @skip('')
     def test_arithmetic_quantization(self):
