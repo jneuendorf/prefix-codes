@@ -1,7 +1,12 @@
 import itertools
 from collections import Counter
 from collections.abc import Hashable, Iterable
+from os import PathLike
+from pathlib import Path
 from typing import TypeVar
+
+import numpy as np
+import numpy.typing as npt
 
 from prefix_codes.typedefs import BitStream, Bit
 
@@ -55,3 +60,24 @@ def get_relative_frequencies(message: Iterable[H]) -> dict[H, float]:
         symbol: count / n
         for symbol, count in counter.items()
     }
+
+
+def parse_binary_pgm(filename: PathLike | str) -> tuple[npt.NDArray[int], int, int]:
+    with open(filename, 'rb') as file:
+        lines: list[bytes] = file.readlines()
+
+    assert len(lines) == 4, 'invalid format'
+    img_type = lines[0].strip(b'\n').decode('ascii')
+    assert img_type == 'P5', f'expected image type "P5" but got "{img_type}"'
+
+    size = lines[1].strip(b'\n').decode('ascii').split()
+    width = int(size[0])
+    height = int(size[1])
+    max_sample_value = int(lines[2].strip(b'\n').decode('ascii'))
+    assert max_sample_value == 255, (
+        f'expected 8-bit samples but got max sample value {max_sample_value}'
+    )
+    data: list[int] = list(lines[3])
+    img = np.array(data).reshape((height, width))
+
+    return img, width, height

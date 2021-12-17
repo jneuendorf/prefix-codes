@@ -9,12 +9,12 @@ from prefix_codes.codecs.rice import RiceCodec
 from prefix_codes.codecs.arithmetic import ArithmeticCodec
 from prefix_codes.codecs.fixed import FixedCodec
 from prefix_codes.codecs.predictive import optimal_affine_predictor_factory, left_and_above_avg_predictor, \
-    PredictiveArithmeticImageCodec
+    PredictiveImageCodec
 from prefix_codes.codecs.shannon_fano_elias import ShannonFanoEliasCodec
 from prefix_codes.codecs.tree_based import TreeBasedCodec
 from prefix_codes.codecs.unary import UnaryCodec
 from prefix_codes.codes.huffman import create_huffman_tree
-from prefix_codes.utils import read_bits, get_relative_frequencies
+from prefix_codes.utils import read_bits, get_relative_frequencies, parse_binary_pgm
 
 
 class TestCodecs(unittest.TestCase):
@@ -187,6 +187,7 @@ class TestCodecs(unittest.TestCase):
             message
         )
 
+    @skip('')
     def test_fixed_encode_decode(self):
         message = b'secret'
         codec = FixedCodec(alphabet=list(set(message)))
@@ -196,6 +197,7 @@ class TestCodecs(unittest.TestCase):
             message
         )
 
+    @skip('')
     def test_unary_encode_decode(self):
         message = b'secret'
         codec = UnaryCodec(alphabet=list(set(message)))
@@ -350,26 +352,28 @@ class TestCodecs(unittest.TestCase):
         print('pred std', np.std(prediction))  # 4680.4459967616995
         print('pred entropy', scipy.stats.entropy(data))  # -inf
 
-    @skip('')
+    # @skip('')
     def test_predictive_codec_predictor_lena(self):
         """07-PredictiveCoding.pdf, slide 28"""
 
-        with open('prefix_codes/tests/lena512.pgm', 'rb') as file:
-            lines: list[bytes] = file.readlines()
+        img, width, height = parse_binary_pgm('prefix_codes/tests/lena512.pgm')
 
-        assert len(lines) == 4, 'invalid format'
-        img_type = lines[0].strip(b'\n').decode('ascii')
-        assert img_type == 'P5', f'expected image type "P5" but got "{img_type}"'
-
-        size = lines[1].strip(b'\n').decode('ascii').split()
-        width = int(size[0])
-        height = int(size[1])
-        max_sample_value = int(lines[2].strip(b'\n').decode('ascii'))
-        assert max_sample_value == 255, (
-            f'expected 8-bit samples but got max sample value {max_sample_value}'
-        )
-        data: list[int] = list(lines[3])
-        img = np.array(data).reshape((height, width))
+        # with open('prefix_codes/tests/lena512.pgm', 'rb') as file:
+        #     lines: list[bytes] = file.readlines()
+        #
+        # assert len(lines) == 4, 'invalid format'
+        # img_type = lines[0].strip(b'\n').decode('ascii')
+        # assert img_type == 'P5', f'expected image type "P5" but got "{img_type}"'
+        #
+        # size = lines[1].strip(b'\n').decode('ascii').split()
+        # width = int(size[0])
+        # height = int(size[1])
+        # max_sample_value = int(lines[2].strip(b'\n').decode('ascii'))
+        # assert max_sample_value == 255, (
+        #     f'expected 8-bit samples but got max sample value {max_sample_value}'
+        # )
+        # data: list[int] = list(lines[3])
+        # img = np.array(data).reshape((height, width))
         print('original image')
         print(img)
 
@@ -406,9 +410,10 @@ class TestCodecs(unittest.TestCase):
         prediction_errors = img - predictions
         print('prediction_errors')
         print(prediction_errors)
+        print(np.min(prediction_errors), np.max(prediction_errors))
 
         height, width = img.shape
-        codec = PredictiveArithmeticImageCodec(
+        codec = PredictiveImageCodec(
             # predictor=cast(
             #     Callable[[tuple[int, int], Iterable[int]], int],
             #     left_and_above_avg_predictor,
@@ -430,12 +435,12 @@ class TestCodecs(unittest.TestCase):
         with open('prefix_codes/tests/lena512.pgm.enc', 'wb') as file:
             file.write(output)
 
-        decoded = codec.decode_byte_stream(output)
-        print('decoded')
-        print(decoded)
-        with open('prefix_codes/tests/lena512_dec.pgm', 'wb') as file:
-            file.writelines(lines[:3])
-            file.writelines([bytes(list(decoded.reshape(-1)))])
+        # decoded = codec.decode_byte_stream(output)
+        # print('decoded')
+        # print(decoded)
+        # with open('prefix_codes/tests/lena512_dec.pgm', 'wb') as file:
+        #     file.writelines(lines[:3])
+        #     file.writelines([bytes(list(decoded.reshape(-1)))])
 
     @skip('')
     def test_predictive_codec_predictor(self):

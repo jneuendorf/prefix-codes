@@ -9,6 +9,7 @@ import numpy as np
 import numpy.typing as npt
 from numpy.linalg import linalg
 
+from prefix_codes.codecs.rice import RiceCodec
 from prefix_codes.codecs.arithmetic import ArithmeticAdaptivePmfCodec
 from prefix_codes.codecs.base import BaseCodec
 from prefix_codes.codecs.base import T
@@ -167,7 +168,8 @@ class PredictiveCodec(BaseCodec[S]):
         ...
 
 
-class PredictiveArithmeticImageCodec(PredictiveCodec[npt.NDArray[int]]):
+class PredictiveImageCodec(PredictiveCodec[npt.NDArray[int]]):
+    codec = RiceCodec(R=4, alphabet=list(range(-255, 256)))
     width: int
     height: int
 
@@ -193,18 +195,20 @@ class PredictiveArithmeticImageCodec(PredictiveCodec[npt.NDArray[int]]):
         return self.width * self.height
 
     def serialize_codec_data(self, message: npt.NDArray[int]) -> bytes:
-        relative_frequencies: dict[int, float] = get_relative_frequencies(self.get_predictions_errors(message).reshape(-1))
-        return pickle.dumps([self.predictor, self.width, self.height, relative_frequencies])
+        # relative_frequencies: dict[int, float] = get_relative_frequencies(self.get_predictions_errors(message).reshape(-1))
+        # return pickle.dumps([self.predictor, self.width, self.height, relative_frequencies])
+        return pickle.dumps([self.predictor, self.width, self.height])
 
     def encode_prediction_errors(self, prediction_errors: npt.NDArray[int], max_length: int = None) -> bytes:
         relative_frequencies: dict[int, float] = get_relative_frequencies(prediction_errors.reshape(-1))
-        codec = ArithmeticAdaptivePmfCodec(
-            V=24,
-            U=24,
-            probabilities=OrderedDict(relative_frequencies),
-            prefix_free=False,
-        )
-        return codec.encode(prediction_errors.reshape(-1), max_length=max_length)
+        # codec = ArithmeticAdaptivePmfCodec(
+        #     V=24,
+        #     U=24,
+        #     probabilities=OrderedDict(relative_frequencies),
+        #     prefix_free=False,
+        # )
+        # codec = RiceCodec(R=4, alphabet=list(range(-255, 256)))
+        return self.codec.encode(prediction_errors.reshape(-1), max_length=max_length)
 
     def get_predictions(self, message: npt.NDArray[int]) -> npt.NDArray[int]:
         return super().get_predictions(message).reshape(self.height, self.width)
@@ -212,15 +216,20 @@ class PredictiveArithmeticImageCodec(PredictiveCodec[npt.NDArray[int]]):
     def iter_index(self, message: npt.NDArray[int]) -> Iterable[tuple[int, ...]]:
         return np.ndindex(*message.shape)
 
-    def decode_prediction_errors(self, byte_stream: bytes, max_length: int = None, probabilities: dict[int, float] = None, **kwargs) -> npt.NDArray[int]:
-        assert probabilities is not None, 'no probabilities for arithmetic (non-adaptive) decoding'
-        codec = ArithmeticAdaptivePmfCodec(
-            V=24,
-            U=24,
-            probabilities=OrderedDict(probabilities),
-            prefix_free=False,
-        )
-        return np.array(list(codec.decode(byte_stream, max_length=max_length))).reshape(self.height, self.width)
+    # def decode_prediction_errors(self, byte_stream: bytes, max_length: int = None, probabilities: dict[int, float] = None, **kwargs) -> npt.NDArray[int]:
+    #     assert probabilities is not None, 'no probabilities for arithmetic (non-adaptive) decoding'
+    #     codec = ArithmeticAdaptivePmfCodec(
+    #         V=24,
+    #         U=24,
+    #         probabilities=OrderedDict(probabilities),
+    #         prefix_free=False,
+    #     )
+    #     return np.array(list(codec.decode(byte_stream, max_length=max_length))).reshape(self.height, self.width)
+    def decode_prediction_errors(self, byte_stream: bytes, max_length: int = None, **kwargs) -> npt.NDArray[int]:
+        # codec = RiceCodec(R=4, alphabet=list(range(-255, 256)))
+        return np.array(list(
+            self.codec.decode(byte_stream, max_length=max_length)
+        )).reshape(self.height, self.width)
 
     def reconstructed(self, prediction_errors: npt.NDArray[int]) -> npt.NDArray[int]:
         print('reconstructing from prediction_errors')
