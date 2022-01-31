@@ -211,7 +211,7 @@ class PredictiveImageCodec(PredictiveCodec[npt.NDArray[int]]):
         return self.codec.encode(prediction_errors.reshape(-1), max_length=max_length)
 
     def get_predictions(self, message: npt.NDArray[int]) -> npt.NDArray[int]:
-        return super().get_predictions(message).reshape(self.height, self.width)
+        return super().get_predictions(message).reshape((self.height, self.width))
 
     def iter_index(self, message: npt.NDArray[int]) -> Iterable[tuple[int, ...]]:
         return np.ndindex(*message.shape)

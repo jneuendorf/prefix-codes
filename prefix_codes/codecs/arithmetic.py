@@ -75,7 +75,8 @@ class ArithmeticCodec(ShannonFanoEliasCodec, Generic[T]):
             for i, symbol in enumerate(self.probabilities)
         }
         assert self.probabilities, 'no probabilities given'
-        assert all(p > 0 for p in self.p_V.values()), 'all must probabilities must be > 0. Try a greater precision'
+        assert all(p > 0 for p in self.p_V.values()), 'all must probabilities must be > 0. Try a greater precision for V'
+        print(sum(self.p_V.values()), '<=', 2 ** self.V)
         assert sum(self.p_V.values()) <= 2 ** self.V, 'invalid quantization'
 
     def get_num_codeword_bits(self, message: Iterable[T]) -> int:

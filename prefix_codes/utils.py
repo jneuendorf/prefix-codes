@@ -74,10 +74,19 @@ def parse_binary_pgm(filename: PathLike | str) -> tuple[npt.NDArray[int], int, i
     width = int(size[0])
     height = int(size[1])
     max_sample_value = int(lines[2].strip(b'\n').decode('ascii'))
-    assert max_sample_value == 255, (
-        f'expected 8-bit samples but got max sample value {max_sample_value}'
-    )
+    assert max_sample_value == 255, f'expected 8-bit samples but got max sample value {max_sample_value}'
     data: list[int] = list(lines[3])
-    img = np.array(data).reshape((height, width))
+    img = np.array(data).reshape(height, width)
 
     return img, width, height
+
+
+def img_to_binary_pgm(img: npt.NDArray[int], width: int, height: int) -> bytes:
+    max_value = np.max(img)
+    assert max_value <= 255, f'expected 8-bit samples but got max sample value {max_value}'
+    return b'\n'.join([
+        'P5'.encode('ascii'),
+        f'{width} {height}'.encode('ascii'),
+        '255'.encode('ascii'),
+        bytes(img.reshape(-1).tolist()),
+    ])

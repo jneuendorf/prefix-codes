@@ -5,6 +5,7 @@ from unittest import skip
 import numpy as np
 import scipy.stats
 
+from prefix_codes.codecs.transform import TransformImageCodec
 from prefix_codes.codecs.rice import RiceCodec
 from prefix_codes.codecs.arithmetic import ArithmeticCodec
 from prefix_codes.codecs.fixed import FixedCodec
@@ -14,7 +15,7 @@ from prefix_codes.codecs.shannon_fano_elias import ShannonFanoEliasCodec
 from prefix_codes.codecs.tree_based import TreeBasedCodec
 from prefix_codes.codecs.unary import UnaryCodec
 from prefix_codes.codes.huffman import create_huffman_tree
-from prefix_codes.utils import read_bits, get_relative_frequencies, parse_binary_pgm
+from prefix_codes.utils import read_bits, get_relative_frequencies, parse_binary_pgm, img_to_binary_pgm
 
 
 class TestCodecs(unittest.TestCase):
@@ -207,6 +208,7 @@ class TestCodecs(unittest.TestCase):
             message
         )
 
+    # @skip('')
     def test_rice_encode_decode(self):
         message = b'what about this?'
         codec = RiceCodec(R=2, alphabet=list(set(message)))
@@ -216,6 +218,7 @@ class TestCodecs(unittest.TestCase):
             message
         )
 
+    @skip('')
     def test_rice_auto_encode_decode(self):
         message = (
             b'this message is rather long '
@@ -352,7 +355,7 @@ class TestCodecs(unittest.TestCase):
         print('pred std', np.std(prediction))  # 4680.4459967616995
         print('pred entropy', scipy.stats.entropy(data))  # -inf
 
-    # @skip('')
+    @skip('')
     def test_predictive_codec_predictor_lena(self):
         """07-PredictiveCoding.pdf, slide 28"""
 
@@ -452,3 +455,28 @@ class TestCodecs(unittest.TestCase):
             ],
         )
         print('prediction for i=0', pred((5,)))
+
+    # @skip('')
+    def test_transform_codec_predictor_lena(self):
+        img, width, height = parse_binary_pgm('prefix_codes/tests/lena512.pgm')
+        # with open('prefix_codes/tests/lena512--2.pgm', 'wb') as f:
+        #     f.write(img_to_binary_pgm(img, width, height))
+
+        codec = TransformImageCodec(
+            width=width,
+            height=height,
+            quantization_step_size=10,
+        )
+        # print(codec)
+        # print(codec.encode(img))
+        encoded = codec.encode(img)
+        print(len(encoded), 'bytes')
+
+        serialization = codec.serialize(img)
+        with open('prefix_codes/tests/lena512.transform.pgm.enc', 'wb') as file:
+            file.write(serialization)
+
+        decoded = TransformImageCodec.decode_byte_stream(serialization)
+        # print(decoded)
+        with open('prefix_codes/tests/lena512.transform.pgm', 'wb') as file:
+            file.write(img_to_binary_pgm(decoded, width, height))
