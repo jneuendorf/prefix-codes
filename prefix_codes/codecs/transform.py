@@ -3,6 +3,7 @@ from collections import OrderedDict
 
 import numpy as np
 import numpy.typing as npt
+from scipy.fft import dct
 
 from prefix_codes.codecs.arithmetic import ArithmeticCodec
 from prefix_codes.codecs.rice import RiceCodec
@@ -52,8 +53,15 @@ class TransformImageCodec(BaseCodec[int]):
     def encode(self, message: IntArray, *, max_length: int = None) -> bytes:
         # print('TransformImageCodec encode')
         # print(message)
-        u: IntArray = message - 128  # type: ignore
-        q: IntArray = np.around(u / self.quantization_step_size).astype(int).reshape(-1)  # type: ignore
+
+        # u: IntArray = message - 128  # type: ignore
+        # q: IntArray = np.around(u / self.quantization_step_size).astype(int).reshape(-1)  # type: ignore
+        transformed = self.transform(message)
+        q: IntArray = (
+            np.around(transformed / self.quantization_step_size)  # type: ignore
+            .astype(int)
+            .reshape(-1)
+        )
         # print('encode q', q.dtype)
         # print(q)
         # print(lossless_codec.R, len(bits), 'bytes')
@@ -64,14 +72,18 @@ class TransformImageCodec(BaseCodec[int]):
         print('distinct count:', len(set(q.tolist())))
         return binary
 
+    def transform(self, message: IntArray) -> IntArray:
+        assert message.ndim == 2, f'expected 2d input but got {message.ndim}'
+        vertically_transformed = dct(message, axis=0, type=2)
+        return dct(vertically_transformed, axis=1, type=2)
+
     def decode(self, byte_stream: bytes, *, max_length: int = None) -> IntArray:
         # q: IntArray = np.array(list(self.lossless_codec.decode(byte_stream, max_length=max_length)))
         q: IntArray = pickle.loads(byte_stream)
         # print('decoded q', q.dtype)
         # print(q)
         u: IntArray = q * self.quantization_step_size  # type: ignore
-        flat_message: IntArray = u + 128  # type: ignore
-        flat_message = np.clip(flat_message, 0, 255)
+        flat_message: IntArray = np.clip(u + 128, 0, 255)  # type: ignore
         message: IntArray = flat_message.reshape((self.height, self.width))
         return message
 
