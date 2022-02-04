@@ -71,6 +71,7 @@ class TransformImageCodec(BaseCodec[int]):
         # print(q)
         u: IntArray = q * self.quantization_step_size  # type: ignore
         flat_message: IntArray = u + 128  # type: ignore
+        flat_message = np.clip(flat_message, 0, 255)
         message: IntArray = flat_message.reshape((self.height, self.width))
         return message
 

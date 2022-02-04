@@ -210,7 +210,7 @@ class ArithmeticCodec(ShannonFanoEliasCodec, Generic[T]):
                     # UPDATE PARAMETERS
                     A_ast = A * self.p_V[symbol]
                     # print('A*', A_ast)
-                    u_ast = u - A * self.c_V[symbol]
+                    # u_ast = u - A * self.c_V[symbol]
                     # print('u*', u_ast)
                     delta_z = leading_zeros(A_ast, UV)
                     # print('∆z', delta_z)
