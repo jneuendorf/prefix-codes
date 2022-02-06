@@ -465,7 +465,7 @@ class TestCodecs(unittest.TestCase):
         codec = TransformImageCodec(
             width=width,
             height=height,
-            quantization_step_size=10,
+            quantization_step_size=32,
         )
         # print(codec)
         # print(codec.encode(img))
