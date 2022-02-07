@@ -208,7 +208,135 @@ class TestCodecs(unittest.TestCase):
             message
         )
 
+    def test_rice0_encode(self):
+        expected = {
+            0: '1',
+            1: '01',
+            2: '001',
+            3: '0001',
+            4: '00001',
+            5: '000001',
+            6: '0000001',
+            7: '00000001',
+            8: '000000001',
+            9: '0000000001',
+            10: '00000000001',
+            11: '000000000001',
+            12: '0000000000001',
+            13: '00000000000001',
+            14: '000000000000001',
+            15: '0000000000000001',
+        }
+
+        codec = RiceCodec(R=0, alphabet=list(range(16)))
+        for n, bit_string in expected.items():
+            # print('testing', n)
+            self.assertEqual(
+                bit_string,
+                ''.join(str(b) for b in codec.encode_to_bits([n])),
+            )
+            self.assertEqual(
+                list(codec.decode(codec.encode([n]))),
+                [n],
+            )
+
     # @skip('')
+    def test_rice1_encode(self):
+        expected = {
+            0: '10',
+            1: '11',
+            2: '010',
+            3: '011',
+            4: '0010',
+            5: '0011',
+            6: '00010',
+            7: '00011',
+            8: '000010',
+            9: '000011',
+            10: '0000010',
+            11: '0000011',
+            12: '00000010',
+            13: '00000011',
+            14: '000000010',
+            15: '000000011',
+        }
+
+        codec = RiceCodec(R=1, alphabet=list(range(16)))
+        for n, bit_string in expected.items():
+            self.assertEqual(
+                bit_string,
+                ''.join(str(b) for b in codec.encode_to_bits([n])),
+            )
+            self.assertEqual(
+                list(codec.decode(codec.encode([n]))),
+                [n],
+            )
+
+    # @skip('')
+    def test_rice2_encode(self):
+        expected = {
+            0: "100",
+            1: "101",
+            2: "110",
+            3: "111",
+            4: "0100",
+            5: "0101",
+            6: "0110",
+            7: "0111",
+            8: "00100",
+            9: "00101",
+            10: "00110",
+            11: "00111",
+            12: "000100",
+            13: "000101",
+            14: "000110",
+            15: "000111",
+        }
+
+        codec = RiceCodec(R=2, alphabet=list(range(16)))
+        for n, bit_string in expected.items():
+            self.assertEqual(
+                bit_string,
+                ''.join(str(b) for b in codec.encode_to_bits([n])),
+            )
+            self.assertEqual(
+                list(codec.decode(codec.encode([n]))),
+                [n],
+            )
+
+    # @skip('')
+    def test_rice3_encode(self):
+        expected = {
+            0: "1000",
+            1: "1001",
+            2: "1010",
+            3: "1011",
+            4: "1100",
+            5: "1101",
+            6: "1110",
+            7: "1111",
+            8: "01000",
+            9: "01001",
+            10: "01010",
+            11: "01011",
+            12: "01100",
+            13: "01101",
+            14: "01110",
+            15: "01111",
+        }
+
+        codec = RiceCodec(R=3, alphabet=list(range(16)))
+        for n, bit_string in expected.items():
+            self.assertEqual(
+                bit_string,
+                ''.join(str(b) for b in codec.encode_to_bits([n])),
+            )
+            self.assertEqual(
+                list(codec.decode(codec.encode([n]))),
+                [n],
+            )
+
+    @skip('')
     def test_rice_encode_decode(self):
         message = b'what about this?'
         codec = RiceCodec(R=2, alphabet=list(set(message)))
@@ -332,7 +460,7 @@ class TestCodecs(unittest.TestCase):
 
         data = np.array([
             int.from_bytes(
-                message[i:i+2],
+                message[i:i + 2],
                 byteorder='little',  # encoded on MS Windows
                 signed=True,
             )
@@ -465,12 +593,12 @@ class TestCodecs(unittest.TestCase):
         codec = TransformImageCodec(
             width=width,
             height=height,
-            quantization_step_size=32,
+            quantization_step_size=2 ** 16,
         )
         # print(codec)
         # print(codec.encode(img))
-        encoded = codec.encode(img)
-        print(len(encoded), 'bytes')
+        # encoded = codec.encode(img)
+        # print(len(encoded), 'bytes')
 
         serialization = codec.serialize(img)
         with open('prefix_codes/tests/lena512.transform.pgm.enc', 'wb') as file:

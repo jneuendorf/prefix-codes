@@ -45,7 +45,7 @@ class RiceCodec(BaseCodec[H]):
     def encode(self, message: Iterable[H], *, max_length: int = None) -> bytes:
         return write_bits(self.encode_to_bits(message, max_length=max_length))
 
-    def encode_to_bits(self, message: Iterable[H], *, max_length: int = None):
+    def encode_to_bits(self, message: Iterable[H], *, max_length: int = None) -> list[Bit]:
         bit_stream: list[Bit] = []
         for i, sample in enumerate(message):
             if max_length is not None and i >= max_length:
@@ -69,10 +69,20 @@ class RiceCodec(BaseCodec[H]):
             if max_length is not None and yielded >= max_length:
                 break
 
-            prefix, unary_used_bits = next(self.unary_codec.decode_bits(bit_stream, max_length=1))
+            # decode next unary-encoded piece
+            if 1 not in bit_stream:  # remaining bits of the bytes are all zeros
+                break
+            prefix = self.unary_codec.decode_bits(bit_stream, max_length=1)[0]
+            unary_used_bits = prefix + 1
             bit_stream = bit_stream[unary_used_bits:]
-            suffix = next(self.fixed_codec.decode_bits(bit_stream, max_length=1))
-            bit_stream = bit_stream[self.fixed_codec.num_bits:]
+
+            fixed_used_bits = self.fixed_codec.num_bits
+            if fixed_used_bits:
+                suffix = self.fixed_codec.decode_bits(bit_stream, max_length=1)[0]
+                bit_stream = bit_stream[fixed_used_bits:]
+            else:  # R = 0 => no fixed-length code. Thus, no used bits and suffix = 0 because it doesn't change n
+                suffix = 0
+
             n = (prefix << self.R) + suffix
             yield self.alphabet[n]
             yielded += 1
