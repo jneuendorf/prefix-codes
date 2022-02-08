@@ -1,8 +1,10 @@
+import itertools
+from collections.abc import Iterator
 from typing import Iterable, Sequence
 
 from prefix_codes.codecs.base import BaseCodec
 from prefix_codes.typedefs import Bit, BitStream
-from prefix_codes.utils import write_bits, read_bits, H, chunk
+from prefix_codes.utils import write_bits, read_bits, H
 
 
 class FixedCodec(BaseCodec):
@@ -45,25 +47,28 @@ class FixedCodec(BaseCodec):
         bit_stream = read_bits(byte_stream)
         yield from self.decode_bits(bit_stream, max_length=max_length)
 
-    def decode_bits(self, bit_stream: BitStream, *, max_length: int = None) -> list[H]:
+    def decode_bits(self, bit_stream: BitStream, *, max_length: int = None) -> Iterator[H]:
         if self.num_bits == 0:
-            return []
+            return
 
-        decoded_samples: list[H] = []
-        for codeword in chunk(bit_stream, self.num_bits):
-            if max_length is not None and len(decoded_samples) >= max_length:
+        decoded_samples = 0
+
+        while True:
+            if max_length is not None and decoded_samples >= max_length:
                 break
 
-            codeword = list(codeword)
+            codeword = list(itertools.islice(bit_stream, self.num_bits))
+            if not codeword:
+                break
+
             n = 0
             num = self.num_bits
             while num:
                 num -= 1
                 n <<= 1
                 n += codeword.pop(0)
-            decoded_samples.append(self.alphabet[n])
-
-        return decoded_samples
+            yield self.alphabet[n]
+            decoded_samples += 1
 
     def serialize_codec_data(self, message: Iterable[H]) -> bytes:
         raise NotImplementedError('FixedCodec.serialize_codec_data')

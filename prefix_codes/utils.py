@@ -1,8 +1,7 @@
 import itertools
 from collections import Counter
-from collections.abc import Hashable, Iterable
+from collections.abc import Hashable, Iterable, Iterator
 from os import PathLike
-from pathlib import Path
 from typing import TypeVar
 
 import numpy as np
@@ -32,7 +31,7 @@ def get_byte(bit_stream: BitStream) -> int:
     return byte
 
 
-def read_bits(message: Iterable[int]) -> BitStream:
+def read_bits(message: Iterable[int]) -> Iterator[Bit]:
     # return ((byte >> i) & 1 for byte in message for i in range(8))
     return (get_bit(byte, i) for byte in message for i in range(8))
 

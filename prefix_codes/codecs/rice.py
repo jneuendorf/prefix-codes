@@ -63,23 +63,23 @@ class RiceCodec(BaseCodec[H]):
         return bit_stream
 
     def decode(self, byte_stream: bytes, *, max_length: int = None) -> Iterable[H]:
-        bit_stream = list(read_bits(byte_stream))
+        bit_stream = read_bits(byte_stream)
         yielded = 0
-        while bit_stream:
+        while True:
             if max_length is not None and yielded >= max_length:
                 break
 
             # decode next unary-encoded piece
-            if 1 not in bit_stream:  # remaining bits of the bytes are all zeros
+            try:
+                prefix = next(self.unary_codec.decode_bits(bit_stream, max_length=1))
+            except StopIteration:
                 break
-            prefix = self.unary_codec.decode_bits(bit_stream, max_length=1)[0]
-            unary_used_bits = prefix + 1
-            bit_stream = bit_stream[unary_used_bits:]
+
+            # unary_used_bits = prefix + 1
 
             fixed_used_bits = self.fixed_codec.num_bits
             if fixed_used_bits:
-                suffix = self.fixed_codec.decode_bits(bit_stream, max_length=1)[0]
-                bit_stream = bit_stream[fixed_used_bits:]
+                suffix = next(self.fixed_codec.decode_bits(bit_stream, max_length=1))
             else:  # R = 0 => no fixed-length code. Thus, no used bits and suffix = 0 because it doesn't change n
                 suffix = 0
 

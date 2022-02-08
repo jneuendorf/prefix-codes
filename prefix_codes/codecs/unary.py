@@ -1,4 +1,4 @@
-from collections.abc import Sequence
+from collections.abc import Sequence, Iterator
 from typing import Iterable
 
 from prefix_codes.codecs.base import BaseCodec
@@ -42,21 +42,21 @@ class UnaryCodec(BaseCodec[H]):
             for decoded, used in self.decode_bits(list(bit_stream), max_length=max_length)
         )
 
-    def decode_bits(self, bit_stream: list[Bit], *, max_length: int = None) -> list[H]:
-        decoded_samples: list[H] = []
-        while bit_stream:
-            if max_length is not None and len(decoded_samples) >= max_length:
+    def decode_bits(self, bit_stream: Iterable[Bit], *, max_length: int = None) -> Iterator[H]:
+        decoded_samples = 0
+        while True:
+            if max_length is not None and decoded_samples >= max_length:
                 break
 
-            if 1 in bit_stream:
-                n = bit_stream.index(1)
-            # remaining bits of the bytes are all zeros
-            else:
-                break
-
-            decoded_samples.append(self.alphabet[n])
-
-        return decoded_samples
+            n = 0
+            for bit in bit_stream:
+                if bit == 0:
+                    n += 1
+                else:
+                    yield self.alphabet[n]
+                    decoded_samples += 1
+                    break
+            break  # no more bits => break out of while
 
     def serialize_codec_data(self, message: Iterable[H]) -> bytes:
         raise NotImplementedError('UnaryCodec.serialize_codec_data')
